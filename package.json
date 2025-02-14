@@ -1,0 +1,14 @@
+{
+  "name": "zeugnis",
+  "version": "1.0.0",
+  "description": "zeugnis",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^34.2.0"
+  }
+}
