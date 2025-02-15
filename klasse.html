@@ -5,8 +5,110 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Klassenwahl</title>
     
+
+
+<style>
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        font-family: Arial, sans-serif;
+    }
+    table {
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        border: 1px solid black;
+        padding: 10px;
+        text-align: 
+        center;
+    }
+
+    button{
+        margin-bottom: 200px;
+    }
+</style>
 </head>
 <body>
-  
+    <h2>Klassenauswahl</h2>
+    <table id="dataTable">
+        <tr>
+            <th>Klassen</th>
+        </tr>
+    </table>
+    
+    <button onclick="showInputField()">Neu Klasse hinzufügen</button>
+    <div id="inputContainer" style="display: none; margin-top: 10px;">
+        <input type="text" id="inputField" placeholder="Neue Klasse">
+        <button onclick="addItem()">Send</button>
+    </div>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", loadTableData);
+
+        function showInputField() {
+            document.getElementById('inputContainer').style.display = 'block';
+        }
+
+        function addItem() {
+            let inputField = document.getElementById('inputField');
+            let inputValue = inputField.value.trim();
+            if (inputValue !== "") {
+                let table = document.getElementById('dataTable');
+                let row = table.insertRow(-1);
+                let cell = row.insertCell(0);
+                let link = document.createElement('a');
+                link.href = `Fächer.html?data=${encodeURIComponent(inputValue)}`;
+                link.textContent = inputValue;
+                cell.appendChild(link);
+                
+                let deleteCell = row.insertCell(1);
+                let deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.onclick = function () { deleteItem(row, inputValue); };
+                deleteCell.appendChild(deleteBtn);
+                
+                saveToLocalStorage(inputValue);
+                inputField.value = "";
+            }
+        }
+
+        function saveToLocalStorage(value) {
+            let data = JSON.parse(localStorage.getItem("tableData")) || [];
+            data.push(value);
+            localStorage.setItem("tableData", JSON.stringify(data));
+        }
+
+        function loadTableData() {
+            let data = JSON.parse(localStorage.getItem("tableData")) || [];
+            let table = document.getElementById('dataTable');
+            data.forEach(value => {
+                let row = table.insertRow(-1);
+                let cell = row.insertCell(0);
+                let link = document.createElement('a');
+                link.href = `Fächer.html?data=${encodeURIComponent(value)}`;
+                link.textContent = value;
+                cell.appendChild(link);
+                
+                let deleteCell = row.insertCell(1);
+                let deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.onclick = function () { deleteItem(row, value); };
+                deleteCell.appendChild(deleteBtn);
+            });
+        }
+
+        function deleteItem(row, value) {
+            let table = document.getElementById('dataTable');
+            table.deleteRow(row.rowIndex);
+            let data = JSON.parse(localStorage.getItem("tableData")) || [];
+            let updatedData = data.filter(item => item !== value);
+            localStorage.setItem("tableData", JSON.stringify(updatedData));
+        }
+    </script>
 </body>
 </html>
