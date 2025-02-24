@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Item Page</title>
+    <title>Fächerauswahl</title>
     <style>
         body {
             display: flex;
@@ -26,18 +26,18 @@
     </style>
 </head>
 <body>
-    <h2 id="pageTitle"></h2>
+    <h2 id="Fächerauswahl"></h2>
     <table id="itemTable">
         <tr>
-            <th>Details</th>
-            <th>Action</th>
+            <th>Fach</th>
+            
         </tr>
     </table>
 
-    <button onclick="showInputField()">Add Detail</button>
+    <button onclick="showInputField()">Neues Fach</button>
     <div id="inputContainer" style="display: none; margin-top: 10px;">
         <input type="text" id="detailField" placeholder="Enter detail">
-        <button onclick="addDetail()">Send</button>
+        <button onclick="addDetail()">send</button>
     </div>
 
     <script>
@@ -47,7 +47,7 @@
         }
 
         let itemName = getQueryParam('data');
-        document.getElementById('pageTitle').textContent = `Details for: ${itemName}`;
+        document.getElementById('Fächerauswahl').textContent = `Fächer von  ${itemName}`;
 
         function showInputField() {
             document.getElementById('inputContainer').style.display = 'block';
@@ -60,7 +60,10 @@
                 let table = document.getElementById('itemTable');
                 let row = table.insertRow(-1);
                 let cell = row.insertCell(0);
-                cell.textContent = detailValue;
+                let link = document.createElement('a');
+                link.href = `Schüler.html?data=${encodeURIComponent(detailValue)}`;
+                link.textContent = detailValue;
+                cell.appendChild(link);
 
                 let deleteCell = row.insertCell(1);
                 let deleteBtn = document.createElement('button');
@@ -85,7 +88,10 @@
             data.forEach(value => {
                 let row = table.insertRow(-1);
                 let cell = row.insertCell(0);
-                cell.textContent = value;
+                let link = document.createElement('a');
+                link.href = `Schüler.html?data=${encodeURIComponent(value)}`;
+                link.textContent = value;
+                cell.appendChild(link);
 
                 let deleteCell = row.insertCell(1);
                 let deleteBtn = document.createElement('button');
