@@ -109,6 +109,12 @@
             localStorage.setItem(`tableData_${itemName}`, JSON.stringify(updatedData));
         }
 
+
+       document.addEventListener("DOMContentLoaded", function() {
+            localStorage.setItem("previousPage", document.referrer);
+        });
+
+        
         document.addEventListener("DOMContentLoaded", loadTableData);
     </script>
 </body>
