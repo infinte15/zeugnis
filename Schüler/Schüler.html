@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Item Page</title>
+    <link rel="stylesheet" href="Schüler.css">
+</head>
+<body>
+    <a href="#" id="backButton" class="back-arrow">&larr;</a>
+    <h2 id="pageTitle"></h2>
+    <div class="column-controls">
+        <div>
+            <button onclick="removeColumn('K')">-</button>
+            <span>KA</span>
+            <button onclick="addColumn('K')">+</button>
+        </div>
+        <div>
+            <button onclick="removeColumn('T')">-</button>
+            <span>Test</span>
+            <button onclick="addColumn('T')">+</button>
+        </div>
+        <div>
+            <button onclick="removeColumn('H')">-</button>
+            <span>Heft</span>
+            <button onclick="addColumn('H')">+</button>
+        </div>
+        <div>
+            <button onclick="removeColumn('M')">-</button>
+            <span>Mündl.</span>
+            <button onclick="addColumn('M')">+</button>
+        </div>
+    </div>
+    <table id="itemTable">
+        <tr>
+            <th></th>
+            <th>Schüler</th>
+            <th>Schnitt</th>
+        </tr>
+    </table>
+    <button onclick="showInputField()">Neuen Schüler hinzufügen</button>
+    <div id="inputContainer" style="display: none; margin-top: 10px;">
+        <input type="text" id="detailField" placeholder="Enter detail">
+        <button onclick="addDetail()">-></button>
+    </div>
+    <script src="Schüler.js"></script>
+</body>
+</html>

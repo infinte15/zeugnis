@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fächerauswahl</title>
+    <link rel="stylesheet" href="Fächer.css">
+</head>
+<body>
+    <a href="#" id="backButton" class="back-arrow">&larr;</a>
+    <h2 id="pageTitle"></h2>
+    <table id="itemTable">
+        <tr>
+            <th>Fach</th>
+            
+        </tr>
+    </table>
+
+    <button onclick="showInputField()">Neues Fach</button>
+    <div id="inputContainer" style="display: none; margin-top: 10px;">
+        <input type="text" id="detailField" placeholder="Enter detail">
+        <button onclick="addDetail()">send</button>
+    </div>
+    <script src="Fächer.js"></script>
+</body>
+</html>
