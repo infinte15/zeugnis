@@ -1,22 +1,12 @@
-// Hilfsfunktionen
+document.addEventListener('DOMContentLoaded', () => {
 
-/**
- * Holt den Wert eines Query-Parameters aus der URL.
- * @param name Der Name des Query-Parameters.
- * @returns Der Wert des Parameters oder null, wenn er nicht gefunden wurde.
- */
+
+// Hilfsfunktionen
 function getQueryParam(name) {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(name);
 }
 
-/**
- * Erstellt ein DOM-Element mit angegebenen Attributen und Textinhalt.
- * @param tag Der Tag-Name des zu erstellenden Elements.
- * @param attributes Ein Objekt mit Attributen und ihren Werten.
- * @param text Der Textinhalt des Elements.
- * @returns Das erstellte DOM-Element.
- */
 function createElement(tag, attributes, text) {
     const element = document.createElement(tag);
     if (attributes) {
@@ -30,7 +20,12 @@ function createElement(tag, attributes, text) {
 const dataManager = {
     itemName: getQueryParam('data'),
     loadData: function () {
-        return JSON.parse(localStorage.getItem(`tableData_${this.itemName}`)) || [];
+        try {
+            return JSON.parse(localStorage.getItem(`tableData_${this.itemName}`)) || [];
+        } catch (e) {
+            console.error("Fehler beim Laden der Daten:", e);
+            return [];
+        }
     },
     saveData: function (data) {
         localStorage.setItem(`tableData_${this.itemName}`, JSON.stringify(data));
@@ -47,6 +42,7 @@ const dataManager = {
 const tableManager = {
     table: document.getElementById('itemTable'),
     addRow: function (value) {
+        if (!this.table) return;
         const row = this.table.insertRow(-1);
         const deleteCell = row.insertCell(0);
         const deleteBtn = createElement('button', null, 'Delete');
@@ -60,30 +56,38 @@ const tableManager = {
         return row;
     },
     clearTable: function () {
+        if (!this.table) return;
         while (this.table.rows.length > 1) {
             this.table.deleteRow(1);
         }
     },
     renderTable: function (data) {
-        if (!this.table) return; // Überprüfung ob die Tabelle vorhanden ist.
+        if (!this.table) return;
         this.clearTable();
-        data.sort((a, b) => a.localeCompare(b));
-        data.forEach(value => {
+        const fragment = document.createDocumentFragment();
+        data.sort((a, b) => a.localeCompare(b)).forEach(value => {
             const row = this.addRow(value);
             for (let i = 2; i < this.table.rows[0].cells.length; i++) {
                 row.insertCell(i);
             }
+            fragment.appendChild(row);
         });
+        tableManager.table.appendChild(fragment);
     }
 };
 
-// Spaltenmanipulation
-let columnCounts = JSON.parse(localStorage.getItem('columnCounts')) || {};
-let addExtraColumn = JSON.parse(localStorage.getItem('addExtraColumn')) || {};
+// Spaltenmanipulation 
+let columnData = JSON.parse(localStorage.getItem('columnData')) || {
+    columnCounts: {},
+    addExtraColumn: {}
+};
 
 function saveColumnData() {
-    localStorage.setItem('columnCounts', JSON.stringify(columnCounts));
-    localStorage.setItem('addExtraColumn', JSON.stringify(addExtraColumn));
+    localStorage.setItem('columnData', JSON.stringify(columnData));
+}
+
+function getColumnOrder() {
+    return ['K', 'T', 'H', 'M'];
 }
 
 function addColumn(letter) {
@@ -91,16 +95,16 @@ function addColumn(letter) {
     const table = tableManager.table;
     const rows = table.rows;
 
-    if (!columnCounts[letter]) {
-        columnCounts[letter] = 0;
-        addExtraColumn[letter] = true;
+    if (!columnData.columnCounts[letter]) {
+        columnData.columnCounts[letter] = 0;
+        columnData.addExtraColumn[letter] = true;
     }
 
-    columnCounts[letter]++;
+    columnData.columnCounts[letter]++;
 
     for (let i = 0; i < rows.length; i++) {
         let insertIndex = rows[i].cells.length - 1;
-        if (columnCounts[letter] > 1 && addExtraColumn[letter]) {
+        if (columnData.columnCounts[letter] > 1 && columnData.addExtraColumn[letter]) {
             let extraColumnIndex = -1;
             for (let j = 0; j < rows[i].cells.length; j++) {
                 if (rows[i].cells[j].dataset.columnLetter === letter + "-extra") {
@@ -117,13 +121,13 @@ function addColumn(letter) {
         cell.textContent = i === 0 ? letter : "";
         cell.dataset.columnLetter = letter;
 
-        if (addExtraColumn[letter] && columnCounts[letter] === 1) {
+        if (columnData.addExtraColumn[letter] && columnData.columnCounts[letter] === 1) {
             const extraCell = rows[i].insertCell(insertIndex + 1);
             extraCell.textContent = i === 0 ? letter + " Extra" : "";
             extraCell.dataset.columnLetter = letter + "-extra";
         }
     }
-    saveColumnData(); 
+    saveColumnData();
 }
 
 function removeColumn(letter) {
@@ -146,7 +150,7 @@ function removeColumn(letter) {
 
         for (let i = 0; i < rows.length; i++) {
             rows[i].deleteCell(lastColumnIndex);
-            if (columnCounts[letter] === 1 && extraColumnIndex !== -1) {
+            if (columnData.columnCounts[letter] === 1 && extraColumnIndex !== -1) {
                 if (extraColumnIndex > lastColumnIndex) {
                     rows[i].deleteCell(extraColumnIndex - 1);
                 } else {
@@ -154,15 +158,15 @@ function removeColumn(letter) {
                 }
             }
         }
-        columnCounts[letter]--;
-        if (columnCounts[letter] === 0) {
-            delete addExtraColumn[letter];
+        columnData.columnCounts[letter]--;
+        if (columnData.columnCounts[letter] === 0) {
+            delete columnData.addExtraColumn[letter];
         }
     }
-    saveColumnData(); 
+    saveColumnData();
 }
 
-// Event-Listener für DOMContentLoaded (angepasst)
+// Event-Listener für DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     let pageTitle = document.getElementById('pageTitle');
     if (pageTitle && dataManager.itemName) {
@@ -171,8 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tableManager.renderTable(dataManager.loadData());
 
     // Spalteninformationen wiederherstellen
-    Object.keys(columnCounts).forEach(letter => {
-        for (let i = 0; i < columnCounts[letter]; i++) {
+    Object.keys(columnData.columnCounts).forEach(letter => {
+        for (let i = 0; i < columnData.columnCounts[letter]; i++) {
             addColumn(letter);
         }
     });
@@ -193,8 +197,11 @@ function addDetail() {
     const detailInput = document.getElementById('detailField');
     const detailValue = detailInput ? detailInput.value.trim() : "";
     if (detailValue) {
-        dataManager.saveData([...dataManager.loadData(), detailValue]);
-        tableManager.renderTable(dataManager.loadData());
+        const data = dataManager.loadData();
+        data.push(detailValue);
+        dataManager.saveData(data);
+        tableManager.renderTable(data);
         if (detailInput) detailInput.value = "";
     }
 }
+});

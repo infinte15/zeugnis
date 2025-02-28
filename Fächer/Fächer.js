@@ -89,12 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
     tableManager.renderTable(dataManager.loadData());
 });
 
-// Event-Listener für pageshow (Cache-Problem beheben)
+//Event-Listener für pageshow 
 window.addEventListener('pageshow', function (event) {
     if (event.persisted) {
         window.location.reload();
     }
 });
+
 
 /**
  * Zeigt das Eingabefeld zum Hinzufügen eines Details an.
