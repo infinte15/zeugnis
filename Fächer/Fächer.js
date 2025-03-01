@@ -28,12 +28,16 @@ function createElement(tag, attributes, text) {
 
 // Datenverwaltung
 const dataManager = {
-    itemName: getQueryParam('data'),
+    klasse: getQueryParam('klasse'), // Holt den Klassennamen
     loadData: function () {
-        return JSON.parse(localStorage.getItem(`tableData_${this.itemName}`)) || [];
+        // Laden der Daten basierend auf Klasse
+        const key = `tableData_${this.klasse}`;
+        return JSON.parse(localStorage.getItem(key)) || [];
     },
     saveData: function (data) {
-        localStorage.setItem(`tableData_${this.itemName}`, JSON.stringify(data));
+        // Speichern der Daten basierend auf Klasse
+        const key = `tableData_${this.klasse}`;
+        localStorage.setItem(key, JSON.stringify(data));
     },
     deleteDetail: function (value) {
         const data = this.loadData();
@@ -43,54 +47,27 @@ const dataManager = {
     }
 };
 
-// Tabellenmanipulation
-const tableManager = {
-    table: document.getElementById('itemTable'),
-    addRow: function (value) {
-        const row = this.table.insertRow(-1);
-        const cell = row.insertCell(0);
-        const link = createElement('a', {
-            href: `../Schüler/Schüler.html?data=${encodeURIComponent(value)}`
-        }, value);
-        cell.appendChild(link);
-
-        const deleteCell = row.insertCell(1);
-        const deleteBtn = createElement('button', null, 'Delete');
-        deleteBtn.onclick = () => {
-            dataManager.deleteDetail(value);
-            this.renderTable(dataManager.loadData());
-        };
-        deleteCell.appendChild(deleteBtn);
-        return row;
-    },
-    clearTable: function () {
-        while (this.table.rows.length > 1) {
-            this.table.deleteRow(1);
-        }
-    },
-    renderTable: function (data) {
-        this.clearTable();
-        const fragment = document.createDocumentFragment();
-        data.sort((a, b) => a.localeCompare(b)).forEach(value => {
-            fragment.appendChild(this.addRow(value));
-        });
-        this.table.appendChild(fragment);
-    }
-};
-
-// Event-Listener für den Zurück-Button
-document.getElementById('backButton').addEventListener('click', function (event) {
-    event.preventDefault();
-    history.back();
-});
-
 // Event-Listener für DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     let pageTitle = document.getElementById('pageTitle');
-    if (pageTitle && dataManager.itemName) {
-        pageTitle.textContent = `Fächer von ${dataManager.itemName}`;
+    if (pageTitle && dataManager.klasse) {
+        pageTitle.textContent = `Fächer von ${decodeURIComponent(dataManager.klasse)}`;
     }
-    tableManager.renderTable(dataManager.loadData());
+
+    // Event-Listener für die Fächer-Divs hinzufügen
+    const fächerDivs = document.querySelectorAll('.fächer');
+    fächerDivs.forEach(fachDiv => {
+        fachDiv.addEventListener('click', () => {
+            const fachName = fachDiv.textContent.trim(); // Fachnamen aus dem Div-Text holen
+            window.location.href = `../Schüler/Schüler.html?klasse=${encodeURIComponent(dataManager.klasse)}&fach=${encodeURIComponent(fachName)}`;
+        });
+    });
+
+    // Event-Listener für den Zurück-Button
+    document.getElementById('backButton').addEventListener('click', function (event) {
+        event.preventDefault();
+        history.back();
+    });
 });
 
 //Event-Listener für pageshow 
@@ -99,29 +76,3 @@ window.addEventListener('pageshow', function (event) {
         window.location.reload();
     }
 });
-
-
-/**
- * Zeigt das Eingabefeld zum Hinzufügen eines Details an.
- */
-function showInputField() {
-    let inputContainer = document.getElementById('inputContainer');
-    if (inputContainer) {
-        inputContainer.style.display = 'block';
-    }
-}
-
-/**
- * Fügt ein neues Detail zur Tabelle hinzu.
- */
-function addDetail() {
-    let detailField = document.getElementById('detailField');
-    let detailValue = detailField ? detailField.value.trim() : "";
-    if (detailValue) {
-        dataManager.saveData([...dataManager.loadData(), detailValue]);
-        tableManager.renderTable(dataManager.loadData());
-        if (detailField) {
-            detailField.value = "";
-        }
-    }
-}

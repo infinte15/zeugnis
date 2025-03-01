@@ -1,10 +1,23 @@
-localStorage.clear();
+
 // Hilfsfunktionen
+
+/**
+ * Holt den Wert eines Query-Parameters aus der URL.
+ * @param param Der Name des Query-Parameters.
+ * @returns Der Wert des Parameters oder null, wenn er nicht gefunden wurde.
+ */
 function getQueryParam(param) {
     let urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(param);
 }
 
+/**
+ * Erstellt ein DOM-Element mit angegebenen Attributen und Textinhalt.
+ * @param tag Der Tag-Name des zu erstellenden Elements.
+ * @param attributes Ein Objekt mit Attributen und ihren Werten.
+ * @param text Der Textinhalt des Elements.
+ * @returns Das erstellte DOM-Element.
+ */
 function createElement(tag, attributes, text) {
     const element = document.createElement(tag);
     if (attributes) {
@@ -14,82 +27,20 @@ function createElement(tag, attributes, text) {
     return element;
 }
 
-// Datenverwaltung
-const dataManager = {
-    loadData: function () {
-        return JSON.parse(localStorage.getItem('klassenData')) || []; // Daten aus localStorage laden
-    },
-    saveData: function (data) {
-        localStorage.setItem('klassenData', JSON.stringify(data)); // Daten in localStorage speichern
-    },
-    deleteDetail: function (value) {
-        const data = this.loadData();
-        const updatedData = data.filter(item => item !== value);
-        this.saveData(updatedData);
-        return updatedData;
-    }
-};
-
-// Tabellenmanipulation
-const tableManager = {
-    table: document.getElementById('dataTable'),
-    addRow: function (value) {
-        const row = this.table.insertRow(-1);
-        const cell = row.insertCell(0);
-        const link = createElement('a', {
-            href: `../Fächer/Fächer.html?data=${encodeURIComponent(value)}` // Link zur Fächer-Seite mit Klassenname als Query-Parameter
-        }, value);
-        cell.appendChild(link);
-
-        const deleteCell = row.insertCell(1);
-        const deleteBtn = createElement('button', null, 'Delete');
-        deleteBtn.onclick = () => {
-            dataManager.deleteDetail(value);
-            this.renderTable(dataManager.loadData());
-        };
-        deleteCell.appendChild(deleteBtn);
-        return row;
-    },
-    deleteRow: function (row) {
-        this.table.deleteRow(row.rowIndex);
-    },
-    clearTable: function () {
-        while (this.table.rows.length > 1) {
-            this.table.deleteRow(1);
-        }
-    },
-    renderTable: function (data) {
-        this.clearTable();
-        const fragment = document.createDocumentFragment();
-        data.sort((a, b) => a.localeCompare(b)).forEach(value => {
-            fragment.appendChild(this.addRow(value));
-        });
-        this.table.appendChild(fragment);
-    }
-};
-
 // Event-Listener für DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
-    tableManager.renderTable(dataManager.loadData()); // Daten beim Laden der Seite anzeigen
+    const klassenElemente = document.querySelectorAll('.klasse');
+    klassenElemente.forEach(element => {
+        element.addEventListener('click', () => {
+            const klassenName = element.dataset.klasse;
+            window.location.href = `../Fächer/Fächer.html?klasse=${encodeURIComponent(klassenName)}`;
+        });
+    });
 });
 
-// Funktion zum Anzeigen des Eingabefeldes
-function showInputField() {
-    let inputContainer = document.getElementById('inputContainer');
-    if (inputContainer) {
-        inputContainer.style.display = 'block';
+//Event-Listener für pageshow 
+window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+        window.location.reload();
     }
-}
-
-// Funktion zum Hinzufügen einer Klasse
-function addDetail() {
-    let inputField = document.getElementById('inputField');
-    let inputValue = inputField ? inputField.value.trim() : "";
-    if (inputValue) {
-        dataManager.saveData([...dataManager.loadData(), inputValue]);
-        tableManager.renderTable(dataManager.loadData());
-        if (inputField) {
-            inputField.value = "";
-        }
-    }
-}
+});
