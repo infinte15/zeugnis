@@ -70,7 +70,11 @@ const tableManager = {
     },
     renderTable: function (data) {
         this.clearTable();
-        data.forEach(value => this.addRow(value));
+        const fragment = document.createDocumentFragment();
+        data.sort((a, b) => a.localeCompare(b)).forEach(value => {
+            fragment.appendChild(this.addRow(value));
+        });
+        this.table.appendChild(fragment);
     }
 };
 
