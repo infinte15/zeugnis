@@ -26,6 +26,10 @@ function createElement(tag, attributes, text) {
     return element;
 }
 
+function deleteAll(){
+    localStorage.clear();
+}
+
 // Datenverwaltung
 const dataManager = {
     klasse: getQueryParam('klasse'), // Holt den Klassennamen
