@@ -11,15 +11,24 @@ const createElement = (tag, attributes, text) => {
 const dataManager = {
     klasse: getQueryParam('klasse'),
     fach: getQueryParam('fach'),
+    _cachedData: null, // Cache für Daten
 
     loadData: function () {
-        const key = `tableData_${this.klasse}_${this.fach}`; // Klasse und Fach berücksichtigen
-        return JSON.parse(localStorage.getItem(key)) || [];
+        if (this._cachedData) return this._cachedData; // Verwende Cache, wenn vorhanden
+        const key = `tableData_${this.klasse}_${this.fach}`;
+        this._cachedData = JSON.parse(localStorage.getItem(key)) || [];
+        return this._cachedData;
     },
 
     saveData: function (data) {
-        const key = `tableData_${this.klasse}_${this.fach}`; // Klasse und Fach berücksichtigen
-        localStorage.setItem(key, JSON.stringify(data));
+        if (JSON.stringify(data) === JSON.stringify(this._cachedData)) return; // Nur speichern, wenn Daten geändert wurden
+        const key = `tableData_${this.klasse}_${this.fach}`;
+        if (data.length === 0) {
+            localStorage.removeItem(key);
+        } else {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+        this._cachedData = data; // Cache aktualisieren
     },
 
     deleteDetail: function (value) {
@@ -33,10 +42,6 @@ const dataManager = {
         const data = this.loadData();
         const updatedData = data.filter(item => item !== value);
         this.saveData(updatedData);
-        if (updatedData.length === 0){
-            const key = `tableData_${this.klasse}_${this.fach}`;
-            localStorage.removeItem(key);
-        }
         return updatedData;
     },
 
@@ -89,39 +94,28 @@ const checkAndSyncData = () => {
 
 
 
-// Tabellenmanipulation
 const tableManager = {
     table: document.getElementById('itemTable'),
 
     addRow: value => {
         if (!tableManager.table) return;
-        
         const headerRow = tableManager.table.rows[0];
         if (!headerRow) return;
-        
         const row = tableManager.table.insertRow(-1);
-        const columnCount = headerRow.cells.length;
-
-        // Erste Spalte: Löschen-Button
         const deleteCell = row.insertCell(0);
         const deleteBtn = createElement('button', null, 'Delete');
         deleteBtn.onclick = () => {
             const confirmation = confirm(`Möchtest du "${value}" wirklich löschen?`);
-            if (!confirmation) return; 
+            if (!confirmation) return;
             dataManager.deleteDetail(value);
             tableManager.renderTable(dataManager.loadData());
         };
         deleteCell.appendChild(deleteBtn);
-
-        // Zweite Spalte: Wert
         const valueCell = row.insertCell(1);
         valueCell.textContent = value;
-
-        // Zusätzliche Spalten auffüllen (damit die Zeile genauso viele Spalten hat wie die Kopfzeile)
-        for (let i = 2; i < columnCount; i++) {
+        for (let i = 2; i < headerRow.cells.length; i++) {
             row.insertCell(i).textContent = "";
         }
-
         return row;
     },
 
@@ -133,16 +127,13 @@ const tableManager = {
     renderTable: data => {
         if (!tableManager.table) return;
         tableManager.clearTable();
-
         const fragment = document.createDocumentFragment();
         data.sort().forEach(value => {
             const row = tableManager.addRow(value);
             fragment.appendChild(row);
         });
-
         tableManager.table.appendChild(fragment);
-        tableManager.renderColumns();
-
+        requestAnimationFrame(() => tableManager.renderColumns()); // Asynchrones Rendern der Spalten
     },
 
     renderColumns: () => {
@@ -243,6 +234,8 @@ const addDetail = () => {
         dataManager.saveData(data);
         tableManager.renderTable(data);
         if (detailInput) detailInput.value = "";
+        const { remote } = require('electron'); 
+        remote.getCurrentWindow().webContents.focus();
     }
 };
 
