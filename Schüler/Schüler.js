@@ -11,34 +11,29 @@ const createElement = (tag, attributes, text) => {
 const dataManager = {
     klasse: getQueryParam('klasse'),
     fach: getQueryParam('fach'),
-    _cachedData: null, // Cache für Daten
 
     loadData: function () {
-        if (this._cachedData) return this._cachedData; // Verwende Cache, wenn vorhanden
         const key = `tableData_${this.klasse}_${this.fach}`;
-        this._cachedData = JSON.parse(localStorage.getItem(key)) || [];
-        return this._cachedData;
+        return JSON.parse(localStorage.getItem(key)) || [];
     },
 
     saveData: function (data) {
-        if (JSON.stringify(data) === JSON.stringify(this._cachedData)) return; // Nur speichern, wenn Daten geändert wurden
         const key = `tableData_${this.klasse}_${this.fach}`;
-        if (data.length === 0) {
-            localStorage.removeItem(key);
-        } else {
-            localStorage.setItem(key, JSON.stringify(data));
-        }
-        this._cachedData = data; // Cache aktualisieren
+        localStorage.setItem(key, JSON.stringify(data));
     },
 
     deleteDetail: function (value) {
         const data = this.loadData();
         const updatedData = data.filter(item => item !== value);
         this.saveData(updatedData);
+        if (updatedData.length === 0) {
+            const key = `tableData_${this.klasse}_${this.fach}`;
+            localStorage.removeItem(key);
+        }
         return updatedData;
     },
 
-    deleteCompletely: function(value){
+    deleteCompletely: function (value) {
         const data = this.loadData();
         const updatedData = data.filter(item => item !== value);
         this.saveData(updatedData);
@@ -53,6 +48,16 @@ const dataManager = {
     saveColumnData: function (columnData) {
         const key = `columnData_${this.klasse}_${this.fach}`;
         localStorage.setItem(key, JSON.stringify(columnData));
+    },
+
+    loadCellData: function () {
+        const key = `cellData_${this.klasse}_${this.fach}`;
+        return JSON.parse(localStorage.getItem(key)) || {};
+    },
+
+    saveCellData: function (cellData) {
+        const key = `cellData_${this.klasse}_${this.fach}`;
+        localStorage.setItem(key, JSON.stringify(cellData));
     }
 };
 
@@ -60,16 +65,13 @@ const checkAndSyncData = () => {
     const currentKey = `tableData_${dataManager.klasse}_${dataManager.fach}`;
     const existingData = JSON.parse(localStorage.getItem(currentKey)) || [];
 
-    // Falls es bereits Daten gibt, nichts tun
     if (existingData.length > 0) return;
 
-    // Verfügbare Datenquellen suchen
     const allKeys = Object.keys(localStorage);
     const relevantKeys = allKeys.filter(key => key.startsWith(`tableData_${dataManager.klasse}_`));
 
-    if (relevantKeys.length === 0) return; // Keine anderen Fächer gefunden
+    if (relevantKeys.length === 0) return;
 
-    // Erstes Fach mit Daten suchen
     let sourceData = [];
     let sourceKey = null;
 
@@ -78,21 +80,18 @@ const checkAndSyncData = () => {
         if (data.length > 0) {
             sourceData = data;
             sourceKey = key;
-            break; // Erstes nicht-leeres Fach gefunden, also stoppen
+            break;
         }
     }
 
-    if (sourceData.length === 0) return; // Falls nirgendwo Daten sind, nichts tun
+    if (sourceData.length === 0) return;
 
-    // Bestätigungsdialog anzeigen
     const userWantsToSync = confirm("Es gibt bereits Daten in einem anderen Fach. Möchtest du sie übernehmen?");
     if (userWantsToSync) {
         localStorage.setItem(currentKey, JSON.stringify(sourceData));
         tableManager.renderTable(sourceData);
     }
 };
-
-
 
 const tableManager = {
     table: document.getElementById('itemTable'),
@@ -133,7 +132,7 @@ const tableManager = {
             fragment.appendChild(row);
         });
         tableManager.table.appendChild(fragment);
-        requestAnimationFrame(() => tableManager.renderColumns()); // Asynchrones Rendern der Spalten
+        requestAnimationFrame(() => tableManager.renderColumns());
     },
 
     renderColumns: () => {
@@ -142,7 +141,6 @@ const tableManager = {
         const headerRow = tableManager.table.rows[0];
         const rows = tableManager.table.rows;
 
-        // Vorhandene dynamische Spalten löschen
         for (let i = headerRow.cells.length - 1; i >= 2; i--) {
             if (headerRow.cells[i].dataset.columnLetter && headerRow.cells[i].dataset.columnLetter !== 'schnitt') {
                 for (let j = 0; j < rows.length; j++) {
@@ -153,7 +151,6 @@ const tableManager = {
             }
         }
 
-        // Dynamische Spalten hinzufügen
         let insertIndex = 2;
         getColumnOrder().forEach(letter => {
             const count = columnData.columnCounts[letter] || 0;
@@ -175,7 +172,6 @@ const tableManager = {
             }
         });
 
-        // Sicherstellen, dass alle Zeilen gleich viele Spalten haben
         const columnCount = headerRow.cells.length;
         for (let i = 1; i < rows.length; i++) {
             while (rows[i].cells.length < columnCount) {
@@ -183,7 +179,6 @@ const tableManager = {
             }
         }
 
-        // Schnitt-Spalte an das Ende verschieben
         const schnittIndex = headerRow.cells.length - 1;
         for (let i = 0; i < rows.length; i++) {
             const schnittCell = rows[i].cells[rows[i].cells.length - 2];
@@ -192,10 +187,11 @@ const tableManager = {
                 rows[i].insertBefore(lastCell, rows[i].cells[schnittIndex]);
             }
         }
+        enableCellEditing();
+        updateAverages();
     }
 };
 
-// Spaltenmanipulation
 const addColumn = letter => {
     const columnData = dataManager.loadColumnData();
     if (!columnData.columnCounts[letter]) {
@@ -234,8 +230,63 @@ const addDetail = () => {
         dataManager.saveData(data);
         tableManager.renderTable(data);
         if (detailInput) detailInput.value = "";
-        const { remote } = require('electron'); 
-        remote.getCurrentWindow().webContents.focus();
+    }
+};
+
+
+// Funktion zur Berechnung des Durchschnitts und Aktualisierung der Extra-Spalten
+const updateAverages = () => {
+    const table = document.getElementById('itemTable');
+    const rows = table.rows;
+    const columnData = dataManager.loadColumnData();
+    const columnLetters = ['K', 'T', 'H', 'M'];
+    
+    for (let colLetter of columnLetters) {
+        let colIndexes = [];
+        let extraColIndex = -1;
+        
+        // Spaltenindizes ermitteln
+        for (let i = 0; i < rows[0].cells.length; i++) {
+            if (rows[0].cells[i].dataset.columnLetter === colLetter) {
+                colIndexes.push(i);
+            } else if (rows[0].cells[i].dataset.columnLetter === `${colLetter}-extra`) {
+                extraColIndex = i;
+            }
+        }
+        
+        if (extraColIndex === -1 || colIndexes.length === 0) continue;
+        
+        // Durchschnitt berechnen und aktualisieren
+        for (let i = 1; i < rows.length; i++) {
+            let sum = 0;
+            let count = 0;
+            colIndexes.forEach(index => {
+                let value = parseFloat(rows[i].cells[index].textContent);
+                if (!isNaN(value)) {
+                    sum += value;
+                    count++;
+                }
+            });
+            
+            const avg = count > 0 ? (sum / count).toFixed(2) : "";
+            rows[i].cells[extraColIndex].textContent = avg;
+        }
+    }
+};
+
+// Event-Listener für Zelleingaben hinzufügen
+const enableCellEditing = () => {
+    const table = document.getElementById('itemTable');
+    for (let i = 1; i < table.rows.length; i++) {
+        for (let j = 2; j < table.rows[i].cells.length; j++) {
+            const cell = table.rows[i].cells[j];
+            if (cell.dataset.columnLetter && !cell.dataset.columnLetter.includes('-extra')) {
+                cell.contentEditable = "true";
+                cell.addEventListener("input", updateAverages);
+            } else {
+                cell.contentEditable = "false";
+            }
+        }
     }
 };
 
