@@ -58,11 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
         pageTitle.textContent = `Fächer von ${decodeURIComponent(dataManager.klasse)}`;
     }
 
-    // Event-Listener für die Fächer-Divs hinzufügen
     const fächerDivs = document.querySelectorAll('.fächer');
     fächerDivs.forEach(fachDiv => {
         fachDiv.addEventListener('click', () => {
-            const fachName = fachDiv.textContent.trim(); // Fachnamen aus dem Div-Text holen
+            const fachName = fachDiv.textContent.trim(); 
             window.location.href = `../Schüler/Schüler.html?klasse=${encodeURIComponent(dataManager.klasse)}&fach=${encodeURIComponent(fachName)}`;
         });
     });

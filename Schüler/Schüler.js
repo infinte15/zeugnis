@@ -58,6 +58,15 @@ const dataManager = {
     saveCellData: function (cellData) {
         const key = `cellData_${this.klasse}_${this.fach}`;
         localStorage.setItem(key, JSON.stringify(cellData));
+    },
+
+    updateCellData: function (rowIndex, colIndex, value) {
+        let cellData = this.loadCellData();
+        if (!cellData[rowIndex]) {
+            cellData[rowIndex] = {};
+        }
+        cellData[rowIndex][colIndex] = value;
+        this.saveCellData(cellData);
     }
 };
 
@@ -140,9 +149,10 @@ const tableManager = {
         const getColumnOrder = () => ['K', 'T', 'H', 'M'];
         const headerRow = tableManager.table.rows[0];
         const rows = tableManager.table.rows;
+        const cellData = dataManager.loadCellData();
 
         for (let i = headerRow.cells.length - 1; i >= 2; i--) {
-            if (headerRow.cells[i].dataset.columnLetter && headerRow.cells[i].dataset.columnLetter !== 'schnitt') {
+            if (headerRow.cells[i].dataset.columnLetter && headerRow.cells[i].dataset.columnLetter !== 'Durchschnitt') {
                 for (let j = 0; j < rows.length; j++) {
                     if (rows[j].cells.length > i) {
                         rows[j].deleteCell(i);
@@ -157,7 +167,7 @@ const tableManager = {
             for (let i = 0; i < count; i++) {
                 for (let j = 0; j < rows.length; j++) {
                     const cell = rows[j].insertCell(insertIndex);
-                    cell.textContent = j === 0 ? letter : "";
+                    cell.textContent = j === 0 ? letter : cellData[j] && cellData[j][insertIndex] ? cellData[j][insertIndex].replace(',', '.') : "";
                     cell.dataset.columnLetter = letter;
                 }
                 insertIndex++;
@@ -165,8 +175,8 @@ const tableManager = {
             if (columnData.addExtraColumn[letter]) {
                 for (let j = 0; j < rows.length; j++) {
                     const cell = rows[j].insertCell(insertIndex);
-                    cell.textContent = j === 0 ? letter + " Extra" : "";
-                    cell.dataset.columnLetter = letter + "-extra";
+                    cell.textContent = j === 0 ? letter + " Schnitt" : cellData[j] && cellData[j][insertIndex] ? cellData[j][insertIndex].replace(',', '.') : "";
+                    cell.dataset.columnLetter = letter + "-schnitt";
                 }
                 insertIndex++;
             }
@@ -183,7 +193,7 @@ const tableManager = {
         for (let i = 0; i < rows.length; i++) {
             const schnittCell = rows[i].cells[rows[i].cells.length - 2];
             const lastCell = rows[i].cells[rows[i].cells.length - 1];
-            if (schnittCell && schnittCell.dataset.columnLetter !== 'schnitt') {
+            if (schnittCell && schnittCell.dataset.columnLetter !== 'Durchschnitt') {
                 rows[i].insertBefore(lastCell, rows[i].cells[schnittIndex]);
             }
         }
@@ -234,7 +244,7 @@ const addDetail = () => {
 };
 
 
-// Funktion zur Berechnung des Durchschnitts und Aktualisierung der Extra-Spalten
+// Durchschnitts 
 const updateAverages = () => {
     const table = document.getElementById('itemTable');
     const rows = table.rows;
@@ -243,25 +253,25 @@ const updateAverages = () => {
     
     for (let colLetter of columnLetters) {
         let colIndexes = [];
-        let extraColIndex = -1;
+        let schnittColIndex = -1;
         
         // Spaltenindizes ermitteln
         for (let i = 0; i < rows[0].cells.length; i++) {
             if (rows[0].cells[i].dataset.columnLetter === colLetter) {
                 colIndexes.push(i);
-            } else if (rows[0].cells[i].dataset.columnLetter === `${colLetter}-extra`) {
-                extraColIndex = i;
+            } else if (rows[0].cells[i].dataset.columnLetter === `${colLetter}-schnitt`) {
+                schnittColIndex = i;
             }
         }
         
-        if (extraColIndex === -1 || colIndexes.length === 0) continue;
+        if (schnittColIndex === -1 || colIndexes.length === 0) continue;
         
         // Durchschnitt berechnen und aktualisieren
         for (let i = 1; i < rows.length; i++) {
             let sum = 0;
             let count = 0;
             colIndexes.forEach(index => {
-                let value = parseFloat(rows[i].cells[index].textContent);
+                let value = parseFloat(rows[i].cells[index].textContent.replace(',', '.'));
                 if (!isNaN(value)) {
                     sum += value;
                     count++;
@@ -269,10 +279,11 @@ const updateAverages = () => {
             });
             
             const avg = count > 0 ? (sum / count).toFixed(2) : "";
-            rows[i].cells[extraColIndex].textContent = avg;
+            rows[i].cells[schnittColIndex].textContent = avg;
         }
     }
 };
+
 
 // Event-Listener für Zelleingaben hinzufügen
 const enableCellEditing = () => {
@@ -280,9 +291,12 @@ const enableCellEditing = () => {
     for (let i = 1; i < table.rows.length; i++) {
         for (let j = 2; j < table.rows[i].cells.length; j++) {
             const cell = table.rows[i].cells[j];
-            if (cell.dataset.columnLetter && !cell.dataset.columnLetter.includes('-extra')) {
+            if (cell.dataset.columnLetter && !cell.dataset.columnLetter.includes('-schnitt')) {
                 cell.contentEditable = "true";
-                cell.addEventListener("input", updateAverages);
+                cell.addEventListener("input", () => {
+                    dataManager.updateCellData(i, j, cell.textContent);
+                    updateAverages();
+                });
             } else {
                 cell.contentEditable = "false";
             }
