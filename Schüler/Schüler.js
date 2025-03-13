@@ -243,8 +243,7 @@ const addDetail = () => {
     }
 };
 
-
-// Durchschnitts 
+// Durchschnitt 
 const updateAverages = () => {
     const table = document.getElementById('itemTable');
     const rows = table.rows;
