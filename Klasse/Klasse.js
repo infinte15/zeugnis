@@ -27,6 +27,26 @@ function createElement(tag, attributes, text) {
     return element;
 }
 
+const darkModeToggle = document.getElementById('darkmode-toggle');
+const body = document.body;
+
+// Beim Laden der Seite den gespeicherten Zustand prüfen
+const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
+if (isDarkMode) {
+    body.classList.add('dark-mode');
+    darkModeToggle.checked = true;
+}
+
+darkModeToggle.addEventListener('change', () => {
+    body.classList.toggle('dark-mode');
+    // Den Zustand in localStorage speichern
+    if (body.classList.contains('dark-mode')) {
+        localStorage.setItem('darkMode', 'enabled');
+    } else {
+        localStorage.setItem('darkMode', 'disabled');
+    }
+});
+
 // Event-Listener für DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     const klassenElemente = document.querySelectorAll('.klasse');
