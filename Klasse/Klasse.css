@@ -101,7 +101,7 @@ label:active:after {
 
 
 input:checked + label + .background-color {
-    background: #242424;
+    background: #121212;
 }
 
 .background-color {
@@ -133,4 +133,23 @@ body.dark-mode .klasse:hover {
     background-color: #2196f3;
     color: white;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.7);
+}
+
+button {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
 }

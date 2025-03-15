@@ -27,23 +27,48 @@ function createElement(tag, attributes, text) {
     return element;
 }
 
-const darkModeToggle = document.getElementById('darkmode-toggle');
-const body = document.body;
-
-// Beim Laden der Seite den gespeicherten Zustand prüfen
-const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
-if (isDarkMode) {
-    body.classList.add('dark-mode');
-    darkModeToggle.checked = true;
+function deleteAll(){
+    const confirmation = confirm(`Möchtest du wirklich alles löschen?`);
+    if (!confirmation) return;
+    localStorage.clear();
 }
 
-darkModeToggle.addEventListener('change', () => {
-    body.classList.toggle('dark-mode');
-    // Den Zustand in localStorage speichern
-    if (body.classList.contains('dark-mode')) {
-        localStorage.setItem('darkMode', 'enabled');
-    } else {
-        localStorage.setItem('darkMode', 'disabled');
+document.addEventListener("DOMContentLoaded", () => {
+    const darkModeToggle = document.getElementById('darkmode-toggle');
+    const body = document.body;
+    const background = document.querySelector('.background-color');
+
+    // Funktion zum Aktualisieren des Dark Mode-Zustands
+    function updateDarkMode(isDarkMode) {
+        if (isDarkMode) {
+            body.classList.add('dark-mode');
+            if (background) {
+                background.style.backgroundColor = '#121212';
+            }
+            localStorage.setItem('darkMode', 'enabled');
+        } else {
+            body.classList.remove('dark-mode');
+            if (background) {
+                background.style.backgroundColor = '#f0f4f8';
+            }
+            localStorage.setItem('darkMode', 'disabled');
+        }
+    }
+
+    // Beim Laden der Seite den gespeicherten Zustand prüfen
+    const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
+    updateDarkMode(isDarkMode);
+
+    // Button-Status IMMER nach dem DOM Update setzen
+    if (darkModeToggle) {
+        darkModeToggle.checked = isDarkMode;
+    }
+
+    // Event Listener für das Umschalten
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('change', () => {
+            updateDarkMode(darkModeToggle.checked);
+        });
     }
 });
 
