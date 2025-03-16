@@ -26,22 +26,29 @@ function createElement(tag, attributes, text) {
     return element;
 }
 
-function deleteAll(){
+function deleteAll() {
     const confirmation = confirm(`Möchtest du wirklich alle Inhalte der ${decodeURIComponent(dataManager.klasse)} löschen?`);
     if (!confirmation) return;
-    localStorage.clear();
+
+    const prefix = `tableData_${dataManager.klasse}_`; 
+
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith(prefix)) {
+            localStorage.removeItem(key);
+        }
+    });
 }
+
+
 
 // Datenverwaltung
 const dataManager = {
-    klasse: getQueryParam('klasse'), // Holt den Klassennamen
-    loadData: function () {
-        // Laden der Daten basierend auf Klasse
+    klasse: getQueryParam('klasse'), 
+    loadData: function () { 
         const key = `tableData_${this.klasse}`;
         return JSON.parse(localStorage.getItem(key)) || [];
     },
     saveData: function (data) {
-        // Speichern der Daten basierend auf Klasse
         const key = `tableData_${this.klasse}`;
         localStorage.setItem(key, JSON.stringify(data));
     },
@@ -58,7 +65,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const body = document.body;
     const background = document.querySelector('.background-color');
 
-    // Funktion zum Aktualisieren des Dark Mode-Zustands
     function updateDarkMode(isDarkMode) {
         if (isDarkMode) {
             body.classList.add('dark-mode');
@@ -73,24 +79,28 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             localStorage.setItem('darkMode', 'disabled');
         }
+        if (darkModeToggle) {
+            darkModeToggle.checked = isDarkMode;
+        }
     }
 
-    // Beim Laden der Seite den gespeicherten Zustand prüfen
     const isDarkMode = localStorage.getItem('darkMode') === 'enabled';
     updateDarkMode(isDarkMode);
 
-    // Button-Status IMMER nach dem DOM Update setzen
-    if (darkModeToggle) {
-        darkModeToggle.checked = isDarkMode;
-    }
-
-    // Event Listener für das Umschalten
     if (darkModeToggle) {
         darkModeToggle.addEventListener('change', () => {
             updateDarkMode(darkModeToggle.checked);
         });
     }
 });
+
+window.addEventListener('pageshow', function () {
+    const darkModeToggle = document.getElementById('darkmode-toggle');
+    if (darkModeToggle) {
+        darkModeToggle.checked = localStorage.getItem('darkMode') === 'enabled';
+    }
+});
+
 
 // Event-Listener für DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
