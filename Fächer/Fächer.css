@@ -100,20 +100,11 @@ label:active:after {
 
 
 input:checked + label + .background-color {
-    background: #121212;
-}
-
-.background-color {
-    width: 100vw;
-    height: 100vh;
-    background: #f0f4f8;
-    z-index: -1;
-    position: absolute;
-    transition: background 0.3s ease;
+    background: #212529;
 }
 
 body.dark-mode {
-    background-color: #121212;
+    background-color: #212529;
     color: #e0e0e0;
 }
 

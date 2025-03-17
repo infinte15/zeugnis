@@ -111,7 +111,7 @@ const tableManager = {
         if (!headerRow) return;
         const row = tableManager.table.insertRow(-1);
         const deleteCell = row.insertCell(0);
-        const deleteBtn = createElement('button', null, 'Delete');
+        const deleteBtn = createElement('deleteButton', null, 'Löschen');
         deleteBtn.onclick = () => {
             const confirmation = confirm(`Möchtest du "${value}" wirklich löschen?`);
             if (!confirmation) return;
