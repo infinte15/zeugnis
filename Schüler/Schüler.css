@@ -228,12 +228,6 @@ deleteButton:hover {
     background-color: #0056b3;
 }
 
-
-#new-button:hover {
-    background-color: #0056b3;
-}
-
-
 #inputContainer {
     display: flex; 
     align-items: center; 
