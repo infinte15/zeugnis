@@ -93,6 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+document.getElementById('backButton').addEventListener('click', event => {
+    event.preventDefault();
+    history.back();
+});
+
 //Event-Listener für pageshow 
 window.addEventListener('pageshow', function (event) {
     if (event.persisted) {

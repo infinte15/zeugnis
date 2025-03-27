@@ -7,6 +7,6 @@ onload = () => {
 
   document.addEventListener("keydown", function(event) {
     if (event.code === "Space") {
-        window.location.href = "../Klasse/klasse.html"; 
+        window.location.href = "../Startpage/startpage.html"; 
     }
 });
