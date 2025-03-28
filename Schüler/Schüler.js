@@ -65,7 +65,8 @@ const dataManager = {
         if (!cellData[rowIndex]) {
             cellData[rowIndex] = {};
         }
-        cellData[rowIndex][colIndex] = value;
+        cellData[rowIndex][colIndex] = value.replace(',', '.');
+
         this.saveCellData(cellData);
     }
 };
@@ -111,7 +112,7 @@ const tableManager = {
         if (!headerRow) return;
         const row = tableManager.table.insertRow(-1);
         const deleteCell = row.insertCell(0);
-        const deleteBtn = createElement('deleteButton', null, 'Löschen');
+        const deleteBtn = createElement('button', { class: "delete-btn" }, 'Löschen');
         deleteBtn.onclick = () => {
             const confirmation = confirm(`Möchtest du "${value}" wirklich löschen?`);
             if (!confirmation) return;
@@ -145,12 +146,17 @@ const tableManager = {
     },
 
     renderColumns: () => {
+        if (!tableManager.table) return;
+    
         const columnData = dataManager.loadColumnData();
-        const getColumnOrder = () => ['K', 'T', 'H', 'M'];
         const headerRow = tableManager.table.rows[0];
+        if (!headerRow) return; 
+    
         const rows = tableManager.table.rows;
         const cellData = dataManager.loadCellData();
-
+        const columnOrder = ['K', 'T', 'H', 'M']; 
+    
+    
         for (let i = headerRow.cells.length - 1; i >= 2; i--) {
             if (headerRow.cells[i].dataset.columnLetter && headerRow.cells[i].dataset.columnLetter !== 'Durchschnitt') {
                 for (let j = 0; j < rows.length; j++) {
@@ -160,35 +166,38 @@ const tableManager = {
                 }
             }
         }
-
+    
         let insertIndex = 2;
-        getColumnOrder().forEach(letter => {
-            const count = columnData.columnCounts[letter] || 0;
+    
+        columnOrder.forEach(letter => {
+            const count = columnData.columnCounts?.[letter] || 0; 
             for (let i = 0; i < count; i++) {
                 for (let j = 0; j < rows.length; j++) {
+                    if (!rows[j]) continue; 
                     const cell = rows[j].insertCell(insertIndex);
-                    cell.textContent = j === 0 ? letter : cellData[j] && cellData[j][insertIndex] ? cellData[j][insertIndex].replace(',', '.') : "";
+                    cell.textContent = j === 0 ? letter : (cellData[j]?.[insertIndex] || "").replace(',', '.');
                     cell.dataset.columnLetter = letter;
                 }
                 insertIndex++;
             }
-            if (columnData.addExtraColumn[letter]) {
+    
+            if (columnData.addExtraColumn?.[letter]) { 
                 for (let j = 0; j < rows.length; j++) {
+                    if (!rows[j]) continue;
                     const cell = rows[j].insertCell(insertIndex);
-                    cell.textContent = j === 0 ? letter + " Schnitt" : cellData[j] && cellData[j][insertIndex] ? cellData[j][insertIndex].replace(',', '.') : "";
-                    cell.dataset.columnLetter = letter + "-schnitt";
+                    cell.textContent = j === 0 ? `${letter} Schnitt` : (cellData[j]?.[insertIndex] || "").replace(',', '.');
+                    cell.dataset.columnLetter = `${letter}-schnitt`;
                 }
                 insertIndex++;
             }
         });
 
-        const columnCount = headerRow.cells.length;
         for (let i = 1; i < rows.length; i++) {
-            while (rows[i].cells.length < columnCount) {
+            while (rows[i].cells.length < headerRow.cells.length) {
                 rows[i].insertCell(rows[i].cells.length).textContent = "";
             }
         }
-
+    
         const schnittIndex = headerRow.cells.length - 1;
         for (let i = 0; i < rows.length; i++) {
             const schnittCell = rows[i].cells[rows[i].cells.length - 2];
@@ -197,6 +206,7 @@ const tableManager = {
                 rows[i].insertBefore(lastCell, rows[i].cells[schnittIndex]);
             }
         }
+    
         enableCellEditing();
         updateAverages();
     }
@@ -204,13 +214,27 @@ const tableManager = {
 
 const addColumn = letter => {
     const columnData = dataManager.loadColumnData();
-    if (!columnData.columnCounts[letter]) {
-        columnData.columnCounts[letter] = 0;
-        columnData.addExtraColumn[letter] = true;
+    if (!columnData.columnCounts[letter]) return;
+
+    columnData.columnCounts[letter]--;
+
+    if (columnData.columnCounts[letter] <= 0) {
+        delete columnData.columnCounts[letter];
     }
-    columnData.columnCounts[letter]++;
+
     dataManager.saveColumnData(columnData);
-    tableManager.renderTable(dataManager.loadData());
+
+    const cellData = dataManager.loadCellData();
+    for (let row in cellData) {
+        if (cellData[row]) {
+            cellData[row] = cellData[row].filter((_, index) => {
+                return tableManager.table.rows[0].cells[index]?.dataset.columnLetter !== letter;
+            });
+        }
+    }
+    dataManager.saveCellData(cellData);
+
+    tableManager.renderColumns();
 };
 
 const removeColumn = letter => {
@@ -361,7 +385,8 @@ document.getElementById('backButton').addEventListener('click', event => {
 });
 
 window.addEventListener('pageshow', function (event) {
-    if (event.persisted) {
+    if (event.persisted && !sessionStorage.getItem("reloaded")) {
+        sessionStorage.setItem("reloaded", "true");
         window.location.reload();
     }
 });

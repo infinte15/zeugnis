@@ -1,5 +1,5 @@
 function navigateTo() {
-    window.location.href = '../Klasse/klasse.html"'; 
+    window.location.href = '../Klasse/klasse.html'; 
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -42,3 +42,13 @@ window.addEventListener('pageshow', function () {
         darkModeToggle.checked = localStorage.getItem('darkMode') === 'enabled';
     }
 });
+    document.addEventListener("DOMContentLoaded", () => {
+        const startButton = document.getElementById("startButton");
+        if (startButton) {
+            startButton.addEventListener("click", navigateTo);
+        }
+    });
+    
+    function navigateTo() {
+        window.location.href = "../Klasse/klasse.html"; 
+    }

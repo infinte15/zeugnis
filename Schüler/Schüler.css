@@ -180,7 +180,7 @@ body.dark-mode table {
     }
 }
 
-deleteButton {
+.delete-btn {
     transform: translateX(-50%);
     padding: 10px 20px;
     font-size: 16px;
@@ -192,7 +192,7 @@ deleteButton {
     transition: background 0.3s;
 }
 
-deleteButton:hover {
+.delete-btn:hover {
     background-color: #0056b3;
 }
 
