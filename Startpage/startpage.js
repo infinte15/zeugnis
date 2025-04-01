@@ -1,7 +1,3 @@
-function navigateTo() {
-    window.location.href = '../Klasse/klasse.html'; 
-}
-
 document.addEventListener("DOMContentLoaded", () => {
     const darkModeToggle = document.getElementById('darkmode-toggle');
     const body = document.body;
@@ -36,19 +32,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+setTimeout(function() {
+    window.location.href = "../Klasse/klasse.html";  
+}, 1000); 
+
 window.addEventListener('pageshow', function () {
     const darkModeToggle = document.getElementById('darkmode-toggle');
     if (darkModeToggle) {
         darkModeToggle.checked = localStorage.getItem('darkMode') === 'enabled';
     }
 });
-    document.addEventListener("DOMContentLoaded", () => {
-        const startButton = document.getElementById("startButton");
-        if (startButton) {
-            startButton.addEventListener("click", navigateTo);
-        }
-    });
-    
-    function navigateTo() {
-        window.location.href = "../Klasse/klasse.html"; 
-    }
+

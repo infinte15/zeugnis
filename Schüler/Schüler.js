@@ -24,8 +24,27 @@ const dataManager = {
 
     deleteDetail: function (value) {
         const data = this.loadData();
+        const indexToDelete = data.indexOf(value);
+        if (indexToDelete === -1) return;
+
         const updatedData = data.filter(item => item !== value);
         this.saveData(updatedData);
+
+        const cellData = this.loadCellData();
+        const updatedCellData = {};
+        let rowIndexOffset = 0;
+        for (let rowIndex in cellData) {
+            if (parseInt(rowIndex) === indexToDelete + 1) { 
+                continue; 
+            }
+            if (parseInt(rowIndex) > indexToDelete + 1) {
+                updatedCellData[parseInt(rowIndex) - 1] = cellData[rowIndex];
+            } else {
+                updatedCellData[rowIndex] = cellData[rowIndex];
+            }
+        }
+        this.saveCellData(updatedCellData);
+
         if (updatedData.length === 0) {
             const key = `tableData_${this.klasse}_${this.fach}`;
             localStorage.removeItem(key);
