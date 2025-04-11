@@ -84,8 +84,7 @@ const dataManager = {
         if (!cellData[rowIndex]) {
             cellData[rowIndex] = {};
         }
-        cellData[rowIndex][colIndex] = value.replace(',', '.');
-
+        cellData[rowIndex][colIndex] = value;
         this.saveCellData(cellData);
     }
 };
@@ -131,7 +130,7 @@ const tableManager = {
         if (!headerRow) return;
         const row = tableManager.table.insertRow(-1);
         const deleteCell = row.insertCell(0);
-        const deleteBtn = createElement('button', { class: "delete-btn" }, 'Löschen');
+        const deleteBtn = createElement('delete-btn', null, 'Löschen');
         deleteBtn.onclick = () => {
             const confirmation = confirm(`Möchtest du "${value}" wirklich löschen?`);
             if (!confirmation) return;
@@ -227,33 +226,20 @@ const tableManager = {
         }
     
         enableCellEditing();
+        enableArrowNavigation();
         updateAverages();
     }
 };
 
 const addColumn = letter => {
     const columnData = dataManager.loadColumnData();
-    if (!columnData.columnCounts[letter]) return;
-
-    columnData.columnCounts[letter]--;
-
-    if (columnData.columnCounts[letter] <= 0) {
-        delete columnData.columnCounts[letter];
+    if (!columnData.columnCounts[letter]) {
+        columnData.columnCounts[letter] = 0;
+        columnData.addExtraColumn[letter] = true;
     }
-
+    columnData.columnCounts[letter]++;
     dataManager.saveColumnData(columnData);
-
-    const cellData = dataManager.loadCellData();
-    for (let row in cellData) {
-        if (cellData[row]) {
-            cellData[row] = cellData[row].filter((_, index) => {
-                return tableManager.table.rows[0].cells[index]?.dataset.columnLetter !== letter;
-            });
-        }
-    }
-    dataManager.saveCellData(cellData);
-
-    tableManager.renderColumns();
+    tableManager.renderTable(dataManager.loadData());
 };
 
 const removeColumn = letter => {
@@ -286,7 +272,6 @@ const addDetail = () => {
     }
 };
 
-// Durchschnitt 
 const updateAverages = () => {
     const table = document.getElementById('itemTable');
     const rows = table.rows;
@@ -297,7 +282,6 @@ const updateAverages = () => {
         let colIndexes = [];
         let schnittColIndex = -1;
         
-        // Spaltenindizes ermitteln
         for (let i = 0; i < rows[0].cells.length; i++) {
             if (rows[0].cells[i].dataset.columnLetter === colLetter) {
                 colIndexes.push(i);
@@ -308,7 +292,6 @@ const updateAverages = () => {
         
         if (schnittColIndex === -1 || colIndexes.length === 0) continue;
         
-        // Durchschnitt berechnen und aktualisieren
         for (let i = 1; i < rows.length; i++) {
             let sum = 0;
             let count = 0;
@@ -327,7 +310,7 @@ const updateAverages = () => {
 };
 
 
-// Event-Listener für Zelleingaben hinzufügen
+
 const enableCellEditing = () => {
     const table = document.getElementById('itemTable');
     for (let i = 1; i < table.rows.length; i++) {
@@ -345,6 +328,50 @@ const enableCellEditing = () => {
         }
     }
 };
+
+const enableArrowNavigation = () => {
+    const table = document.getElementById('itemTable');
+
+    table.addEventListener('keydown', function (e) {
+        const currentCell = document.activeElement;
+        if (!currentCell || currentCell.tagName !== 'TD') return;
+
+        const row = currentCell.parentElement;
+        const rowIndex = row.rowIndex;
+        const cellIndex = currentCell.cellIndex;
+
+        let targetCell;
+
+        switch (e.key) {
+            case 'ArrowUp':
+                if (rowIndex > 1) {
+                    targetCell = table.rows[rowIndex - 1].cells[cellIndex];
+                }
+                break;
+            case 'ArrowDown':
+                if (rowIndex < table.rows.length - 1) {
+                    targetCell = table.rows[rowIndex + 1].cells[cellIndex];
+                }
+                break;
+            case 'ArrowLeft':
+                if (cellIndex > 2) {
+                    targetCell = row.cells[cellIndex - 1];
+                }
+                break;
+            case 'ArrowRight':
+                if (cellIndex < row.cells.length - 1) {
+                    targetCell = row.cells[cellIndex + 1];
+                }
+                break;
+        }
+
+        if (targetCell && targetCell.isContentEditable) {
+            e.preventDefault();
+            targetCell.focus();
+        }
+    });
+};
+
 
 document.addEventListener("DOMContentLoaded", () => {
     const darkModeToggle = document.getElementById('darkmode-toggle');
