@@ -2,21 +2,15 @@ html, body {
     margin: 0;
     padding: 0;
     height: 100%;
-    overflow: hidden;
+    overflow: auto;
 }
 
 body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    height: 100vh;
-    font-family: 'Roboto', sans-serif; 
-    background-color: #f8f9fa; 
-    color: #343a40;
-    transition: background-color 0.3s ease, color 0.3s ease;
-    position: relative;
-    padding-top: 60px;
+    padding: 60px 20px 40px; 
+    box-sizing: border-box;
 }
 
 .dark-mode-container {

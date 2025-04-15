@@ -1,4 +1,3 @@
-// Hilfsfunktionen
 const getQueryParam = name => new URLSearchParams(window.location.search).get(name);
 
 const createElement = (tag, attributes, text) => {
@@ -136,6 +135,7 @@ const tableManager = {
             if (!confirmation) return;
             dataManager.deleteDetail(value);
             tableManager.renderTable(dataManager.loadData());
+            scrollIfNeeded();
         };
         deleteCell.appendChild(deleteBtn);
         const valueCell = row.insertCell(1);
@@ -240,6 +240,7 @@ const addColumn = letter => {
     columnData.columnCounts[letter]++;
     dataManager.saveColumnData(columnData);
     tableManager.renderTable(dataManager.loadData());
+            scrollIfNeeded();
 };
 
 const removeColumn = letter => {
@@ -252,6 +253,7 @@ const removeColumn = letter => {
         }
         dataManager.saveColumnData(columnData);
         tableManager.renderTable(dataManager.loadData());
+            scrollIfNeeded();
     }
 };
 
@@ -268,6 +270,7 @@ const addDetail = () => {
         data.push(detailValue);
         dataManager.saveData(data);
         tableManager.renderTable(data);
+        scrollIfNeeded();
         if (detailInput) detailInput.value = "";
     }
 };
@@ -340,37 +343,132 @@ const enableArrowNavigation = () => {
         const rowIndex = row.rowIndex;
         const cellIndex = currentCell.cellIndex;
 
-        let targetCell;
+        const isSchnitt = (cell) =>
+            cell.dataset.columnLetter && cell.dataset.columnLetter.includes('-schnitt');
+
+        // Horizontal nach links/rechts suchen
+        const findNextEditableCell = (rowIdx, direction) => {
+            let targetIdx = cellIndex;
+            do {
+                targetIdx += direction;
+                if (
+                    targetIdx >= 2 &&
+                    targetIdx < table.rows[rowIdx].cells.length &&
+                    !isSchnitt(table.rows[rowIdx].cells[targetIdx])
+                ) {
+                    return table.rows[rowIdx].cells[targetIdx];
+                }
+            } while (
+                targetIdx >= 2 &&
+                targetIdx < table.rows[rowIdx].cells.length
+            );
+            return null;
+        };
+
+        const findVerticalEditableCell = (rowDirection) => {
+            let targetRowIdx = rowIndex + rowDirection;
+            while (
+                targetRowIdx > 0 &&
+                targetRowIdx < table.rows.length
+            ) {
+                const targetCell = table.rows[targetRowIdx].cells[cellIndex];
+                if (targetCell && targetCell.isContentEditable && !isSchnitt(targetCell)) {
+                    return targetCell;
+                }
+                targetRowIdx += rowDirection;
+            }
+            return null;
+        };
+
+        let targetCell = null;
 
         switch (e.key) {
             case 'ArrowUp':
-                if (rowIndex > 1) {
-                    targetCell = table.rows[rowIndex - 1].cells[cellIndex];
-                }
+                targetCell = findVerticalEditableCell(-1);
                 break;
             case 'ArrowDown':
-                if (rowIndex < table.rows.length - 1) {
-                    targetCell = table.rows[rowIndex + 1].cells[cellIndex];
-                }
+                targetCell = findVerticalEditableCell(1);
                 break;
             case 'ArrowLeft':
-                if (cellIndex > 2) {
-                    targetCell = row.cells[cellIndex - 1];
-                }
+                targetCell = findNextEditableCell(rowIndex, -1);
                 break;
             case 'ArrowRight':
-                if (cellIndex < row.cells.length - 1) {
-                    targetCell = row.cells[cellIndex + 1];
-                }
+                targetCell = findNextEditableCell(rowIndex, 1);
                 break;
         }
 
-        if (targetCell && targetCell.isContentEditable) {
+        if (targetCell) {
             e.preventDefault();
             targetCell.focus();
         }
     });
 };
+
+navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    document.getElementById('video').srcObject = stream;
+});
+
+function captureAndRead() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    Tesseract.recognize(canvas, 'deu').then(result => {
+        const text = result.data.text;
+        processRecognizedText(text);
+    });
+}
+
+function processRecognizedText(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    const names = [];
+    const cellData = {};
+
+    lines.forEach((line, i) => {
+        const match = line.match(/^([A-Za-zÄÖÜäöüß\s]+)\s+([\d\s,\.]+)$/);
+        if (match) {
+            const name = match[1].trim();
+            const noten = match[2].trim().split(/\s+/);
+            names.push(name);
+            cellData[i + 1] = {};
+            noten.forEach((note, j) => {
+                cellData[i + 1][j + 2] = note.replace(',', '.'); 
+            });
+        }
+    });
+
+    dataManager.saveData(names);
+    dataManager.saveCellData(cellData);
+    tableManager.renderTable(names);
+}
+
+document.getElementById('imageUpload').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            Tesseract.recognize(canvas, 'deu').then(result => {
+                const text = result.data.text;
+                processRecognizedText(text);
+            });
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+});
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -422,6 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     checkAndSyncData();
     tableManager.renderTable(dataManager.loadData());
+            scrollIfNeeded();
 });
 
 // Event-Listener
@@ -436,3 +535,18 @@ window.addEventListener('pageshow', function (event) {
         window.location.reload();
     }
 });
+
+const scrollIfNeeded = () => {
+    const body = document.body;
+    const table = document.getElementById('itemTable');
+    if (!table) return;
+
+    const tableBottom = table.getBoundingClientRect().bottom;
+    const windowHeight = window.innerHeight;
+
+    if (tableBottom > windowHeight) {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    } else if (body.scrollTop > 0 && tableBottom < windowHeight * 0.9) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+};

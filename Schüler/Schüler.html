@@ -13,6 +13,15 @@
     <div class="background-color"></div>
     </div> 
 
+<video id="video" autoplay></video>
+<button onclick="captureAndRead()">📸</button>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<input type="file" accept="image/*" id="imageUpload">
+<canvas id="canvas" style="display:none;"></canvas>
+
+
+
     <a href="#" id="backButton" class="back-arrow">&larr;</a>
     <h2 id="pageTitle"></h2>
     <div class="column-controls">
@@ -50,5 +59,7 @@
         <button   onclick="addDetail()" id="add-student-button">-></button>
     </div>
     <script src="Schüler.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+
 </body>
 </html>
