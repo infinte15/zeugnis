@@ -155,7 +155,11 @@ const tableManager = {
         if (!tableManager.table) return;
         tableManager.clearTable();
         const fragment = document.createDocumentFragment();
-        data.sort().forEach(value => {
+       /* data.sort().forEach(value => {
+            const row = tableManager.addRow(value);
+            fragment.appendChild(row);
+        });*/
+        data.forEach(value => {
             const row = tableManager.addRow(value);
             fragment.appendChild(row);
         });
@@ -240,7 +244,7 @@ const addColumn = letter => {
     columnData.columnCounts[letter]++;
     dataManager.saveColumnData(columnData);
     tableManager.renderTable(dataManager.loadData());
-            scrollIfNeeded();
+    scrollIfNeeded();
 };
 
 const removeColumn = letter => {
@@ -310,6 +314,31 @@ const updateAverages = () => {
             rows[i].cells[schnittColIndex].textContent = avg;
         }
     }
+
+    const weights = loadWeights();
+    const weightSum = ['K','T','H','M'].reduce((sum, key) => sum + (weights[key] || 0), 0);
+
+    if (weightSum > 0) {
+        const endNoteIndex = table.rows[0].cells.length - 1;
+        table.rows[0].cells[endNoteIndex].textContent = "Endnote";
+
+        for (let i = 1; i < rows.length; i++) {
+            let total = 0;
+
+            ['K', 'T', 'H', 'M'].forEach(letter => {
+                const colIndex = [...rows[0].cells].findIndex(cell => cell.dataset.columnLetter === `${letter}-schnitt`);
+                if (colIndex > -1) {
+                    const val = parseFloat(rows[i].cells[colIndex].textContent.replace(',', '.'));
+                    if (!isNaN(val)) total += val * (weights[letter] || 0);
+                }
+            });
+
+            const finalNoteCell = rows[i].cells[endNoteIndex];
+            finalNoteCell.textContent = total ? total.toFixed(2) : '';
+            finalNoteCell.style.color = 'red';
+        }
+    }
+
 };
 
 
@@ -332,6 +361,49 @@ const enableCellEditing = () => {
     }
 };
 
+document.getElementById('weightSettingsBtn').addEventListener('click', () => {
+    const weights = loadWeights();
+    document.getElementById('weightK').value = weights.K || '';
+    document.getElementById('weightT').value = weights.T || '';
+    document.getElementById('weightH').value = weights.H || '';
+    document.getElementById('weightM').value = weights.M || '';
+    document.getElementById('weightModal').style.display = 'flex';
+});
+
+function closeWeightModal() {
+    document.getElementById('weightModal').style.display = 'none';
+}
+
+function saveWeights() {
+    const parseWeight = val => {
+        if (!val) return 0;
+        val = val.trim();
+        if (val.includes('%')) return parseFloat(val) / 100;
+        if (val.includes('/')) {
+            const [a, b] = val.split('/');
+            return parseFloat(a) / parseFloat(b);
+        }
+        return parseFloat(val);
+    };
+
+    const weights = {
+        K: parseWeight(document.getElementById('weightK').value),
+        T: parseWeight(document.getElementById('weightT').value),
+        H: parseWeight(document.getElementById('weightH').value),
+        M: parseWeight(document.getElementById('weightM').value),
+    };
+    const key = `weights_${dataManager.klasse}_${dataManager.fach}`;
+    localStorage.setItem(key, JSON.stringify(weights));
+    document.getElementById('weightModal').style.display = 'none';
+    updateAverages(); // Endnoten aktualisieren
+}
+
+function loadWeights() {
+    const key = `weights_${dataManager.klasse}_${dataManager.fach}`;
+    return JSON.parse(localStorage.getItem(key)) || {};
+}
+
+
 const enableArrowNavigation = () => {
     const table = document.getElementById('itemTable');
 
@@ -345,25 +417,21 @@ const enableArrowNavigation = () => {
 
         const isSchnitt = (cell) =>
             cell.dataset.columnLetter && cell.dataset.columnLetter.includes('-schnitt');
-
-        // Horizontal nach links/rechts suchen
         const findNextEditableCell = (rowIdx, direction) => {
             let targetIdx = cellIndex;
-            do {
+            while (true) {
                 targetIdx += direction;
                 if (
-                    targetIdx >= 2 &&
-                    targetIdx < table.rows[rowIdx].cells.length &&
-                    !isSchnitt(table.rows[rowIdx].cells[targetIdx])
-                ) {
-                    return table.rows[rowIdx].cells[targetIdx];
-                }
-            } while (
-                targetIdx >= 2 &&
-                targetIdx < table.rows[rowIdx].cells.length
-            );
+                    targetIdx < 2 || 
+                    targetIdx >= table.rows[rowIdx].cells.length
+                ) break;
+        
+                const cell = table.rows[rowIdx].cells[targetIdx];
+                if (cell && cell.isContentEditable) return cell;
+            }
             return null;
         };
+        
 
         const findVerticalEditableCell = (rowDirection) => {
             let targetRowIdx = rowIndex + rowDirection;
@@ -403,6 +471,17 @@ const enableArrowNavigation = () => {
         }
     });
 };
+  //Kamera starten
+  function startCameraInput() {
+    selectColumnForInput(colIndex => captureAndRead(colIndex));
+  }
+  
+  function startMicInput() {
+    selectColumnForInput(colIndex => {
+      alert("Spracheingabe in Spalte " + colIndex + " (Feature nicht implementiert)");
+      // TODO: Sprache erkennen und Noten einfügen
+    });
+  }
 
 navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
     document.getElementById('video').srcObject = stream;
@@ -449,25 +528,26 @@ function processRecognizedText(text) {
 document.getElementById('imageUpload').addEventListener('change', function(event) {
     const file = event.target.files[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
+  
+    selectColumnForInput(colIndex => {
+      const reader = new FileReader();
+      reader.onload = function (e) {
         const img = new Image();
-        img.onload = function() {
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-
-            Tesseract.recognize(canvas, 'deu').then(result => {
-                const text = result.data.text;
-                processRecognizedText(text);
-            });
+        img.onload = function () {
+          const canvas = document.getElementById("canvas");
+          const ctx = canvas.getContext("2d");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+  
+          Tesseract.recognize(canvas, "deu").then(result => {
+            insertTextToColumn(result.data.text, colIndex);
+          });
         };
         img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+      };
+      reader.readAsDataURL(file);
+    });
 });
 
 
@@ -512,7 +592,6 @@ window.addEventListener('pageshow', function () {
     }
 });
 
-// Event-Listener für DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     let pageTitle = document.getElementById('pageTitle');
     if (pageTitle && dataManager.klasse && dataManager.fach) {
@@ -523,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollIfNeeded();
 });
 
-// Event-Listener
+
 document.getElementById('backButton').addEventListener('click', event => {
     event.preventDefault();
     history.back();
@@ -550,3 +629,14 @@ const scrollIfNeeded = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
+
+function selectColumnForInput(callback) {
+    const headers = [...document.querySelectorAll("#itemTable th")].slice(2);
+    const colNames = headers.map((h, i) => `${i + 2}: ${h.textContent}`).join("\n");
+    const input = prompt(`Zu welcher Spalte sollen die Noten?\n${colNames}`);
+    const colIndex = parseInt(input);
+    if (!isNaN(colIndex)) callback(colIndex);
+  }
+  
+
+  

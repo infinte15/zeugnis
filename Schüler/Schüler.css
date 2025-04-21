@@ -232,3 +232,93 @@ body.dark-mode table {
     cursor: pointer;
     transition: background 0.3s;
 }
+
+.modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.modal-content input {
+    width: 80%;
+    margin: 5px 0;
+    padding: 5px;
+}
+
+body.dark-mode .modal-content {
+    background: #343a40;
+    color: white;
+}
+
+.weight-label {
+    text-align: left;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.weight-label input {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+body.dark-mode .weight-label input {
+    background-color: #495057;
+    color: #fff;
+    border: 1px solid #666;
+}
+
+.custom-side-buttons {
+    position: fixed;
+    top: 100px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 100;
+  }
+  .custom-side-buttons.right {
+    top:100px;
+    left: auto;
+    right: 10px;
+  }
+  .circle-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #007bff;
+    color: white;
+    font-size: 24px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.3s;
+    text-align: center;
+  }
+  .circle-btn:hover {
+    background: #0056b3;
+  }
+  body.dark-mode .circle-btn {
+    background: #444;
+  }
+
+  .upload-icon::after {
+    content: none !important;
+  }

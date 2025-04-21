@@ -13,12 +13,36 @@
     <div class="background-color"></div>
     </div> 
 
-<video id="video" autoplay></video>
-<button onclick="captureAndRead()">📸</button>
-<canvas id="canvas" style="display:none;"></canvas>
+    <div class="custom-side-buttons">
+        <button id="cameraBtn" class="circle-btn" onclick="startCameraInput()">📷</button>
+        <label for="imageUpload" class="circle-btn upload-icon">📂</label>
+        <input type="file" accept="image/*" id="imageUpload" style="display:none">
+        <button id="micBtn" class="circle-btn" onclick="startMicInput()">🎤</button>
+      </div>
+      <div class="custom-side-buttons right">
+        <button id="weightSettingsBtn" class="circle-btn">📊</button>
+      </div>
 
-<input type="file" accept="image/*" id="imageUpload">
-<canvas id="canvas" style="display:none;"></canvas>
+<div id="weightModal" style="display:none;" class="modal">
+    <div class="modal-content">
+        <h3>Gewichtung einstellen</h3>
+        <div class="weight-label">Klassenarbeiten:
+            <input type="text" id="weightK" placeholder="z.B. 0.4 oder 40%">
+        </div>
+        <div class="weight-label">Tests:
+            <input type="text" id="weightT" placeholder="z.B. 0.2 oder 20%">
+        </div>
+        <div class="weight-label">Heftnote:
+            <input type="text" id="weightH" placeholder="z.B. 0.2 oder 20%">
+        </div>
+        <div class="weight-label">Mündlich:
+            <input type="text" id="weightM" placeholder="z.B. 0.2 oder 20%">
+        </div>
+        <br>
+        <button onclick="saveWeights()">Speichern</button>
+        <button onclick="closeWeightModal()">Schließen</button>
+    </div>
+</div>
 
 
 
@@ -55,7 +79,7 @@
     </table>
     <button  onclick="showInputField()" id="new-button">Neuen Schüler hinzufügen</button>
     <div id="inputContainer" style="display: none; margin-top: 10px;">
-        <input type="text" id="detailField" placeholder="Enter detail">
+        <input type="text" id="detailField" placeholder="Neuen Schüler hinzufügen">
         <button   onclick="addDetail()" id="add-student-button">-></button>
     </div>
     <script src="Schüler.js"></script>
