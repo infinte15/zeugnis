@@ -322,3 +322,36 @@ body.dark-mode .weight-label input {
   .upload-icon::after {
     content: none !important;
   }
+
+  #columnList {
+    list-style-type: none; /* Entfernt die Punkte */
+    padding: 0;
+}
+
+#columnList li {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+    background-color: #f9f9f9;
+    color: #333;
+    margin-bottom: 5px; /* Fügt etwas Abstand zwischen den Einträgen hinzu */
+}
+
+#columnList li:hover {
+    background: #0056b3;
+}
+
+
+#columnList li.selected {
+    background-color: #e0f7fa;
+    font-weight: bold;
+    border-color: #26a69a;
+    color: #333;
+}
+
+.modal-content h3 {
+    text-align: center;
+    margin-bottom: 15px;
+}

@@ -471,85 +471,271 @@ const enableArrowNavigation = () => {
         }
     });
 };
-  //Kamera starten
+
   function startCameraInput() {
     selectColumnForInput(colIndex => captureAndRead(colIndex));
-  }
-  
-  function startMicInput() {
-    selectColumnForInput(colIndex => {
-      alert("Spracheingabe in Spalte " + colIndex + " (Feature nicht implementiert)");
-      // TODO: Sprache erkennen und Noten einfügen
-    });
   }
 
 navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
     document.getElementById('video').srcObject = stream;
 });
 
+function startMicInput() {
+    selectColumnForInput(colIndex => {
+      alert("Spracheingabe in Spalte " + colIndex + " (Feature nicht implementiert)");
+      // TODO: Sprache erkennen und Noten einfügen
+    });
+  }
+
+  function askColumnIndex() {
+    return new Promise(resolve => {
+        const modal = document.getElementById('columnSelectModal');
+        const columnList = document.getElementById('columnList');
+        const columnData = dataManager.loadColumnData();
+        const columnOrder = ['K', 'T', 'H', 'M'];
+        let selectedIndex = null;
+
+        columnList.innerHTML = ''; // Leere vorherige Einträge
+
+        columnOrder.forEach(letter => {
+            const count = columnData.columnCounts?.[letter] || 0;
+            for (let i = 0; i < count; i++) {
+                const listItem = document.createElement('li');
+                const calculatedIndex = 2 + getColumnIndexOffset(columnData, letter, i, false);
+                listItem.textContent = `${letter} ${i + 1}`;
+                listItem.dataset.columnIndex = calculatedIndex;
+                listItem.addEventListener('click', () => {
+                    columnList.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+                    listItem.classList.add('selected');
+                    selectedIndex = parseInt(listItem.dataset.columnIndex);
+                    modal.style.display = 'none';
+                    resolve(selectedIndex);
+                });
+                columnList.appendChild(listItem);
+            }
+        });
+
+        modal.style.display = 'block';
+
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                resolve(null);
+            }
+        });
+    });
+}
+
+// Hilfsfunktion, um den korrekten Spaltenindex zu berechnen
+function getColumnIndexOffset(columnData, letter, index, includeSchnitt) {
+    let offset = 0;
+    const order = ['K', 'T', 'H', 'M'];
+    for (const l of order) {
+        if (l === letter) {
+            return offset + index;
+        }
+        offset += (columnData.columnCounts?.[l] || 0);
+        if (includeSchnitt && columnData.addExtraColumn?.[l]) {
+            offset++;
+        }
+    }
+    return -1; // Sollte nicht vorkommen
+}
+
+// --- Hauptfunktion für Kamera- & Datei-Input ---
+function processImageAndInsert(imageSource, colIndex) {
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const img = new Image();
+    img.onload = function () {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        Tesseract.recognize(canvas, "deu").then(result => {
+            const text = result.data.text;
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            let names = dataManager.loadData();
+            let cellData = dataManager.loadCellData();
+            let hasNewData = false;
+
+            lines.forEach((line, i) => {
+                const match = line.match(/^([A-Za-zÄÖÜäöüß\s]+)([+\-.\d]+(?:[.,]\d+)?(?:[+\-])?)(?:-\d+)?$/);
+                if (match) {
+                    const name = match[1].trim();
+                    const rawNote = match[2].trim();
+                    const processedNote = processNoteValue(rawNote);
+
+                    let nameIndex = names.indexOf(name);
+                    if (nameIndex === -1) {
+                        names.push(name);
+                        nameIndex = names.length - 1;
+                        hasNewData = true;
+                    }
+
+                    const rowIndex = nameIndex + 1;
+                    if (!cellData[rowIndex]) cellData[rowIndex] = {};
+                    cellData[rowIndex][colIndex] = processedNote;
+                }
+            });
+
+            if (hasNewData || Object.keys(cellData).length > 0) {
+                dataManager.saveData(names);
+                dataManager.saveCellData(cellData);
+                tableManager.renderTable(names);
+            }
+        });
+    };
+    img.src = imageSource;
+}
+
+// --- Kamera-Verarbeitung ---
 function captureAndRead() {
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+    const colIndex = askColumnIndex();
+    if (colIndex === null) return;
+
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    Tesseract.recognize(canvas, 'deu').then(result => {
-        const text = result.data.text;
-        processRecognizedText(text);
-    });
+    const dataURL = canvas.toDataURL("image/png");
+    processImageAndInsert(dataURL, colIndex);
 }
 
-function processRecognizedText(text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-    const names = [];
-    const cellData = {};
 
-    lines.forEach((line, i) => {
-        const match = line.match(/^([A-Za-zÄÖÜäöüß\s]+)\s+([\d\s,\.]+)$/);
+function insertTextToColumn(text, colIndex) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    let names = dataManager.loadData();
+    let cellData = dataManager.loadCellData();
+    let hasNewData = false;
+
+    lines.forEach(line => {
+        const match = line.match(/^([A-Za-zÄÖÜäöüß\s]+)([+\-.\d]+(?:[.,]\d+)?(?:[+\-])?)(?:-\d+)?$/);
         if (match) {
             const name = match[1].trim();
-            const noten = match[2].trim().split(/\s+/);
-            names.push(name);
-            cellData[i + 1] = {};
-            noten.forEach((note, j) => {
-                cellData[i + 1][j + 2] = note.replace(',', '.'); 
-            });
+            const rawNote = match[2].trim();
+            const processedNote = processNoteValue(rawNote);
+
+            let nameIndex = names.indexOf(name);
+            if (nameIndex === -1) {
+                names.push(name);
+                nameIndex = names.length - 1;
+                hasNewData = true;
+            }
+
+            const rowIndex = nameIndex + 1;
+            if (!cellData[rowIndex]) cellData[rowIndex] = {};
+            cellData[rowIndex][colIndex] = processedNote;
         }
     });
 
-    dataManager.saveData(names);
-    dataManager.saveCellData(cellData);
-    tableManager.renderTable(names);
+    if (hasNewData || Object.keys(cellData).length > 0) {
+        dataManager.saveData(names);
+        dataManager.saveCellData(cellData);
+        tableManager.renderTable(names);
+    }
 }
 
-document.getElementById('imageUpload').addEventListener('change', function(event) {
+
+// --- Datei-Upload-Verarbeitung ---
+
+document.getElementById('imageUpload').addEventListener('change', function (event) {
     const file = event.target.files[0];
     if (!file) return;
-  
-    selectColumnForInput(colIndex => {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const img = new Image();
-        img.onload = function () {
-          const canvas = document.getElementById("canvas");
-          const ctx = canvas.getContext("2d");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          ctx.drawImage(img, 0, 0);
-  
-          Tesseract.recognize(canvas, "deu").then(result => {
-            insertTextToColumn(result.data.text, colIndex);
-          });
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
+
+    const colIndexPromise = new Promise(resolve => {
+        const index = askColumnIndex();
+        resolve(index);
+    });
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const reader = new FileReader();
+
+    colIndexPromise.then(colIndex => {
+        if (colIndex === null) return;
+
+        if (['png', 'jpg', 'jpeg', 'bmp', 'gif', 'webp'].includes(ext)) {
+            // Bild -> OCR
+            reader.onload = e => processImageAndInsert(e.target.result, colIndex);
+            reader.readAsDataURL(file);
+        } else if (['txt', 'csv'].includes(ext)) {
+            // Text oder CSV
+            reader.onload = e => {
+                insertTextToColumn(e.target.result, colIndex);
+            };
+            reader.readAsText(file);
+        } else if (['xlsx', 'xls'].includes(ext)) {
+            // Excel -> SheetJS
+            reader.onload = e => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                const names = dataManager.loadData();
+                const cellData = dataManager.loadCellData();
+
+        rows.forEach((row, i) => {
+            if (row[0] && row[1]) {
+                const name = String(row[0]).trim();
+                const rawNote = String(row[1]).trim();
+                const processedNote = processNoteValue(rawNote);
+
+                let index = names.indexOf(name);
+                if (index === -1) {
+                names.push(name);
+                index = names.length - 1;
+            }
+
+            const rowIndex = index + 1;
+            if (!cellData[rowIndex]) cellData[rowIndex] = {};
+                cellData[rowIndex][colIndex] = processedNote;
+            }
+        });
+
+                dataManager.saveData(names);
+                dataManager.saveCellData(cellData);
+                tableManager.renderTable(names);
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            alert("Dieses Dateiformat wird leider nicht unterstützt.");
+        }
     });
 });
 
+function processNoteValue(note) {
+    note = note.trim().replace(',', '.'); // Komma durch Punkt ersetzen und Leerzeichen entfernen
+
+    if (note.endsWith('+')) {
+        const base = parseFloat(note.slice(0, -1));
+        if (!isNaN(base)) {
+            return base - 0.25;
+        }
+    } else if (note.endsWith('-')) {
+        const base = parseFloat(note.slice(0, -1));
+        if (!isNaN(base)) {
+            return base + 0.25;
+        }
+    } else if (note.includes('-')) {
+        const parts = note.split('-');
+        if (parts.length === 2) {
+            const start = parseFloat(parts[0]);
+            const end = parseFloat(parts[1]);
+            if (!isNaN(start) && !isNaN(end) && end === start + 1) {
+                return start + 0.5;
+            }
+        }
+    }
+
+    const parsed = parseFloat(note);
+    return isNaN(parsed) ? note : parsed; // Gib Original zurück, wenn keine Sonderzeichen oder ungültig
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     const darkModeToggle = document.getElementById('darkmode-toggle');
@@ -629,14 +815,3 @@ const scrollIfNeeded = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 };
-
-function selectColumnForInput(callback) {
-    const headers = [...document.querySelectorAll("#itemTable th")].slice(2);
-    const colNames = headers.map((h, i) => `${i + 2}: ${h.textContent}`).join("\n");
-    const input = prompt(`Zu welcher Spalte sollen die Noten?\n${colNames}`);
-    const colIndex = parseInt(input);
-    if (!isNaN(colIndex)) callback(colIndex);
-  }
-  
-
-  
