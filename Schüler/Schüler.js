@@ -197,7 +197,9 @@ const tableManager = {
                 for (let j = 0; j < rows.length; j++) {
                     if (!rows[j]) continue; 
                     const cell = rows[j].insertCell(insertIndex);
-                    cell.textContent = j === 0 ? letter : (cellData[j]?.[insertIndex] || "").replace(',', '.');
+                    const rawValue = cellData[j]?.[insertIndex];
+                    cell.textContent = j === 0 ? letter : (rawValue !== undefined ? String(rawValue).replace(',', '.') : "");
+
                     cell.dataset.columnLetter = letter;
                 }
                 insertIndex++;
@@ -472,269 +474,226 @@ const enableArrowNavigation = () => {
     });
 };
 
-  function startCameraInput() {
-    selectColumnForInput(colIndex => captureAndRead(colIndex));
-  }
+const convertNote = (noteStr) => {
+    noteStr = noteStr.trim();
 
-navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-    document.getElementById('video').srcObject = stream;
+    if (/^\d[+-]?$/.test(noteStr)) {
+        let base = parseInt(noteStr);
+        if (noteStr.endsWith('+')) return base - 0.25;
+        if (noteStr.endsWith('-')) return base + 0.25;
+        return base;
+    }
+
+    if (/^\d-\d$/.test(noteStr)) {
+        const parts = noteStr.split('-').map(n => parseInt(n));
+        return (parts[0] + parts[1]) / 2;
+    }
+
+    return parseFloat(noteStr.replace(',', '.')) || "";
+};
+
+window.selectedColumnIndex = null;
+
+const showColumnSelectModal = (callback) => {
+    const columnList = document.getElementById('columnList');
+    const modal = document.getElementById('columnSelectModal');
+    columnList.innerHTML = "";
+
+    const headerRow = document.querySelector('#itemTable tr');
+    if (!headerRow) return;
+
+    const columnCounters = {};
+
+    for (let i = 2; i < headerRow.cells.length - 1; i++) {
+        const th = headerRow.cells[i];
+        const letter = th.dataset.columnLetter;
+
+        if (!letter || letter.includes('schnitt') || letter.toLowerCase().includes('endnote')) continue;
+
+        if (!columnCounters[letter]) columnCounters[letter] = 1;
+        else columnCounters[letter]++;
+
+        const label = `${letter}${columnCounters[letter]}`;
+        const li = document.createElement('li');
+        li.textContent = label;
+
+        li.addEventListener('click', () => {
+            selectedColumnIndex = i;
+            modal.style.display = 'none';
+            callback(i);
+        });
+
+        columnList.appendChild(li);
+    }
+
+    modal.style.display = 'flex';
+};
+
+
+
+document.getElementById('imageUpload').addEventListener('change', (e) => {
+    showColumnSelectModal(async (columnIndex) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (['txt', 'csv'].includes(ext)) {
+            const text = await file.text();
+            processNoteData(text, columnIndex);
+        } else if (['xls', 'xlsx'].includes(ext)) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const workbook = XLSX.read(ev.target.result, { type: 'binary' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                let text = data.map(row => row.join('\t')).join('\n');
+                processNoteData(text, columnIndex);
+            };
+            reader.readAsBinaryString(file);
+        } else if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+            const image = URL.createObjectURL(file);
+            Tesseract.recognize(image, 'deu').then(result => {
+                processNoteData(result.data.text, columnIndex);
+            });
+        }
+    });
 });
 
-function startMicInput() {
-    selectColumnForInput(colIndex => {
-      alert("Spracheingabe in Spalte " + colIndex + " (Feature nicht implementiert)");
-      // TODO: Sprache erkennen und Noten einfügen
-    });
-  }
+const startCameraInput = () => {
+    showColumnSelectModal((columnIndex) => {
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            const video = document.createElement('video');
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `<div class="modal-content"><h3>Zeige das Blatt mit Namen + Noten</h3></div>`;
+            modal.querySelector('.modal-content').appendChild(video);
+            document.body.appendChild(modal);
 
-  function askColumnIndex() {
-    return new Promise(resolve => {
-        const modal = document.getElementById('columnSelectModal');
-        const columnList = document.getElementById('columnList');
-        const columnData = dataManager.loadColumnData();
-        const columnOrder = ['K', 'T', 'H', 'M'];
-        let selectedIndex = null;
+            video.srcObject = stream;
+            video.play();
 
-        columnList.innerHTML = ''; // Leere vorherige Einträge
-
-        columnOrder.forEach(letter => {
-            const count = columnData.columnCounts?.[letter] || 0;
-            for (let i = 0; i < count; i++) {
-                const listItem = document.createElement('li');
-                const calculatedIndex = 2 + getColumnIndexOffset(columnData, letter, i, false);
-                listItem.textContent = `${letter} ${i + 1}`;
-                listItem.dataset.columnIndex = calculatedIndex;
-                listItem.addEventListener('click', () => {
-                    columnList.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
-                    listItem.classList.add('selected');
-                    selectedIndex = parseInt(listItem.dataset.columnIndex);
-                    modal.style.display = 'none';
-                    resolve(selectedIndex);
+            const canvas = document.getElementById('canvas');
+            setTimeout(() => {
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                stream.getTracks().forEach(track => track.stop());
+                modal.remove();
+                canvas.toBlob(blob => {
+                    Tesseract.recognize(blob, 'deu').then(result => {
+                        processNoteData(result.data.text, columnIndex);
+                    });
                 });
-                columnList.appendChild(listItem);
-            }
-        });
-
-        modal.style.display = 'block';
-
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-                resolve(null);
-            }
+            }, 4000);
         });
     });
-}
+};
 
-// Hilfsfunktion, um den korrekten Spaltenindex zu berechnen
-function getColumnIndexOffset(columnData, letter, index, includeSchnitt) {
-    let offset = 0;
-    const order = ['K', 'T', 'H', 'M'];
-    for (const l of order) {
-        if (l === letter) {
-            return offset + index;
-        }
-        offset += (columnData.columnCounts?.[l] || 0);
-        if (includeSchnitt && columnData.addExtraColumn?.[l]) {
-            offset++;
-        }
-    }
-    return -1; // Sollte nicht vorkommen
-}
+const processNoteData = (text, columnIndex) => {
+    const lines = text.split('\n');
+    const data = dataManager.loadData();
+    const cellData = dataManager.loadCellData();
 
-// --- Hauptfunktion für Kamera- & Datei-Input ---
-function processImageAndInsert(imageSource, colIndex) {
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-
-    const img = new Image();
-    img.onload = function () {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-
-        Tesseract.recognize(canvas, "deu").then(result => {
-            const text = result.data.text;
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            let names = dataManager.loadData();
-            let cellData = dataManager.loadCellData();
-            let hasNewData = false;
-
-            lines.forEach((line, i) => {
-                const match = line.match(/^([A-Za-zÄÖÜäöüß\s]+)([+\-.\d]+(?:[.,]\d+)?(?:[+\-])?)(?:-\d+)?$/);
-                if (match) {
-                    const name = match[1].trim();
-                    const rawNote = match[2].trim();
-                    const processedNote = processNoteValue(rawNote);
-
-                    let nameIndex = names.indexOf(name);
-                    if (nameIndex === -1) {
-                        names.push(name);
-                        nameIndex = names.length - 1;
-                        hasNewData = true;
-                    }
-
-                    const rowIndex = nameIndex + 1;
-                    if (!cellData[rowIndex]) cellData[rowIndex] = {};
-                    cellData[rowIndex][colIndex] = processedNote;
-                }
-            });
-
-            if (hasNewData || Object.keys(cellData).length > 0) {
-                dataManager.saveData(names);
-                dataManager.saveCellData(cellData);
-                tableManager.renderTable(names);
-            }
-        });
-    };
-    img.src = imageSource;
-}
-
-// --- Kamera-Verarbeitung ---
-function captureAndRead() {
-    const colIndex = askColumnIndex();
-    if (colIndex === null) return;
-
-    const video = document.getElementById("video");
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const dataURL = canvas.toDataURL("image/png");
-    processImageAndInsert(dataURL, colIndex);
-}
-
-
-function insertTextToColumn(text, colIndex) {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-    let names = dataManager.loadData();
-    let cellData = dataManager.loadCellData();
-    let hasNewData = false;
+    let updatedData = [...data];
+    let updated = false;
 
     lines.forEach(line => {
-        const match = line.match(/^([A-Za-zÄÖÜäöüß\s]+)([+\-.\d]+(?:[.,]\d+)?(?:[+\-])?)(?:-\d+)?$/);
-        if (match) {
-            const name = match[1].trim();
-            const rawNote = match[2].trim();
-            const processedNote = processNoteValue(rawNote);
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 2) return;
 
-            let nameIndex = names.indexOf(name);
-            if (nameIndex === -1) {
-                names.push(name);
-                nameIndex = names.length - 1;
-                hasNewData = true;
-            }
+        const name = parts.slice(0, -1).join(' ');
+        const noteRaw = parts[parts.length - 1];
+        const note = convertNote(noteRaw);
+        if (!name || note === "") return;
 
-            const rowIndex = nameIndex + 1;
-            if (!cellData[rowIndex]) cellData[rowIndex] = {};
-            cellData[rowIndex][colIndex] = processedNote;
+        let rowIndex = updatedData.indexOf(name);
+        if (rowIndex === -1) {
+            updatedData.push(name);
+            rowIndex = updatedData.length - 1;
+            updated = true;
         }
+
+        const actualRowIndex = rowIndex + 1;
+        if (!cellData[actualRowIndex]) cellData[actualRowIndex] = {};
+        cellData[actualRowIndex][columnIndex] = String(note);
     });
 
-    if (hasNewData || Object.keys(cellData).length > 0) {
-        dataManager.saveData(names);
-        dataManager.saveCellData(cellData);
-        tableManager.renderTable(names);
-    }
-}
+    if (updated) dataManager.saveData(updatedData);
+    dataManager.saveCellData(cellData);
+    tableManager.renderTable(updatedData);
+};
 
+document.getElementById('exportButton').addEventListener('click', () => {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Exportformat wählen</h3>
+            <button id="exportText" >📄 Text</button>
+            <button id="exportExcel" >📊 Excel</button>
+            <br><br>
+            <button id="cancelExport">Abbrechen</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
 
-// --- Datei-Upload-Verarbeitung ---
+    document.getElementById('exportText').onclick = () => {
+        exportAsText();
+        modal.remove();
+    };
 
-document.getElementById('imageUpload').addEventListener('change', function (event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    document.getElementById('exportExcel').onclick = () => {
+        exportAsExcel();
+        modal.remove();
+    };
 
-    const colIndexPromise = new Promise(resolve => {
-        const index = askColumnIndex();
-        resolve(index);
-    });
-
-    const ext = file.name.split('.').pop().toLowerCase();
-    const reader = new FileReader();
-
-    colIndexPromise.then(colIndex => {
-        if (colIndex === null) return;
-
-        if (['png', 'jpg', 'jpeg', 'bmp', 'gif', 'webp'].includes(ext)) {
-            // Bild -> OCR
-            reader.onload = e => processImageAndInsert(e.target.result, colIndex);
-            reader.readAsDataURL(file);
-        } else if (['txt', 'csv'].includes(ext)) {
-            // Text oder CSV
-            reader.onload = e => {
-                insertTextToColumn(e.target.result, colIndex);
-            };
-            reader.readAsText(file);
-        } else if (['xlsx', 'xls'].includes(ext)) {
-            // Excel -> SheetJS
-            reader.onload = e => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-                const names = dataManager.loadData();
-                const cellData = dataManager.loadCellData();
-
-        rows.forEach((row, i) => {
-            if (row[0] && row[1]) {
-                const name = String(row[0]).trim();
-                const rawNote = String(row[1]).trim();
-                const processedNote = processNoteValue(rawNote);
-
-                let index = names.indexOf(name);
-                if (index === -1) {
-                names.push(name);
-                index = names.length - 1;
-            }
-
-            const rowIndex = index + 1;
-            if (!cellData[rowIndex]) cellData[rowIndex] = {};
-                cellData[rowIndex][colIndex] = processedNote;
-            }
-        });
-
-                dataManager.saveData(names);
-                dataManager.saveCellData(cellData);
-                tableManager.renderTable(names);
-            };
-            reader.readAsArrayBuffer(file);
-        } else {
-            alert("Dieses Dateiformat wird leider nicht unterstützt.");
-        }
-    });
+    document.getElementById('cancelExport').onclick = () => modal.remove();
 });
 
-function processNoteValue(note) {
-    note = note.trim().replace(',', '.'); // Komma durch Punkt ersetzen und Leerzeichen entfernen
-
-    if (note.endsWith('+')) {
-        const base = parseFloat(note.slice(0, -1));
-        if (!isNaN(base)) {
-            return base - 0.25;
-        }
-    } else if (note.endsWith('-')) {
-        const base = parseFloat(note.slice(0, -1));
-        if (!isNaN(base)) {
-            return base + 0.25;
-        }
-    } else if (note.includes('-')) {
-        const parts = note.split('-');
-        if (parts.length === 2) {
-            const start = parseFloat(parts[0]);
-            const end = parseFloat(parts[1]);
-            if (!isNaN(start) && !isNaN(end) && end === start + 1) {
-                return start + 0.5;
-            }
+function getExportData() {
+    const table = document.getElementById('itemTable');
+    const data = [];
+    for (let i = 1; i < table.rows.length; i++) {
+        const name = table.rows[i].cells[1]?.textContent.trim();
+        const note = table.rows[i].cells[table.rows[i].cells.length - 1]?.textContent.trim();
+        if (name) {
+            data.push({ name, note });
         }
     }
+    return data;
+}
 
-    const parsed = parseFloat(note);
-    return isNaN(parsed) ? note : parsed; // Gib Original zurück, wenn keine Sonderzeichen oder ungültig
+function exportAsText() {
+    const data = getExportData();
+    const lines = data.map(entry => `${entry.name}: ${entry.note}`);
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const filename = generateFilename('noten', 'txt');
+    triggerDownload(blob, filename);
+}
+
+function exportAsExcel() {
+    const data = getExportData();
+    const rows = [['Schüler', 'Endnote'], ...data.map(d => [d.name, d.note])];
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Noten');
+    const blob = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const filename = generateFilename('Endnoten', 'xlsx');
+    triggerDownload(new Blob([blob], { type: 'application/octet-stream' }), filename);
+}
+
+function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function generateFilename(base, extension) {
+    const klasse = dataManager.klasse ? dataManager.klasse.replace(/\s+/g, '') : 'Klasse';
+    const fach = dataManager.fach ? dataManager.fach.replace(/\s+/g, '') : 'Fach';
+    return `${base}_${klasse}_${fach}.${extension}`;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
