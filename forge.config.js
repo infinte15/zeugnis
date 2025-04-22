@@ -2,19 +2,17 @@ const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
-  packagerConfig: {
-    asar: true,
-  },
-  rebuildConfig: {},
-   makers: [
+  packagerConfig: {},
+  makers: [
     {
       name: '@electron-forge/maker-squirrel',
       config: {
         certificateFile: './cert.pfx',
         certificatePassword: process.env.CERTIFICATE_PASSWORD
-      }
-    }
+      },
+    },
   ],
+
   plugins: [
     {
       name: '@electron-forge/plugin-auto-unpack-natives',
