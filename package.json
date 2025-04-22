@@ -1,14 +1,14 @@
 {
-  "name": "zeugnis",
+  "name": "zeugnisprogramm",
   "version": "1.0.0",
-  "description": "zeugnis",
+  "description": "zeugnisprogramm",
   "main": "main.js",
   "scripts": {
-    "start": "electron-forge start",
-    "package": "electron-forge package",
+    "start": "electron .",
+    "package": "electron-packager . zeugnisprogramm --platform=win32 --arch=x64 --out=dist",
     "make": "electron-forge make"
   },
-  "author": "",
+  "author": "Finn Deuschle",
   "license": "ISC",
   "devDependencies": {
     "@electron-forge/cli": "^7.8.0",
