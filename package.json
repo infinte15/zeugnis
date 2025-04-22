@@ -4,9 +4,10 @@
   "description": "zeugnisprogramm",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "package": "electron-packager . zeugnisprogramm --platform=win32 --arch=x64 --out=dist",
-    "make": "electron-forge make"
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish"
   },
   "author": "Finn Deuschle",
   "license": "ISC",
@@ -33,6 +34,7 @@
   },
   "homepage": "https://github.com/infinte15/zeugnis#readme",
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1"
+    "electron-squirrel-startup": "^1.0.1",
+    "update-electron-app": "^3.1.1"
   }
 }
