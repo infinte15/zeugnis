@@ -6,7 +6,7 @@ const createWindow = () => {
     height: 1000,
   })
   win.maximize();
-  win.loadFile('index.html')
+  win.loadFile('Blume/blume.html')
 }
 
 app.whenReady().then(() => {
