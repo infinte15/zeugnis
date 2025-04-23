@@ -1,7 +1,7 @@
 {
   "name": "zeugnisprogramm",
   "productName": "Zeugnisprogramm",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "zeugnisprogramm",
   "main": "main.js",
   "scripts": {
@@ -15,7 +15,6 @@
       "target": "nsis"
     }
   },
-  
   "author": "Finn Deuschle",
   "license": "ISC",
   "devDependencies": {
