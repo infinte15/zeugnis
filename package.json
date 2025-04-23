@@ -1,6 +1,6 @@
 {
   "name": "zeugnisprogramm",
- "productName":"Zeugnisprogramm",
+  "productName": "Zeugnisprogramm",
   "version": "1.0.0",
   "description": "zeugnisprogramm",
   "main": "main.js",
@@ -10,7 +10,12 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish"
   },
-
+  "build": {
+    "win": {
+      "target": "nsis"
+    }
+  },
+  
   "author": "Finn Deuschle",
   "license": "ISC",
   "devDependencies": {
@@ -24,7 +29,6 @@
     "@electron-forge/publisher-github": "^7.8.0",
     "@electron/fuses": "^1.8.0",
     "electron": "^34.2.0",
-    "electron-winstaller": "^5.4.0",
     "http-server": "^14.1.1"
   },
   "repository": {
@@ -36,7 +40,6 @@
   },
   "homepage": "https://github.com/infinte15/zeugnis#readme",
   "dependencies": {
- 
     "electron-squirrel-startup": "^1.0.1",
     "update-electron-app": "^3.1.1"
   }
