@@ -1,7 +1,7 @@
 {
   "name": "zeugnisprogramm",
   "productName": "Zeugnisprogramm",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "zeugnisprogramm",
   "main": "main.js",
   "scripts": {
@@ -32,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/infinte15/zeugnis.git"
+    "url": "https://github.com/infinte15/zeugnis.git"
   },
   "bugs": {
     "url": "https://github.com/infinte15/zeugnis/issues"
