@@ -563,6 +563,10 @@ const startCameraInput = () => {
     showColumnSelectModal((columnIndex) => {
         navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
             const video = document.createElement('video');
+            video.setAttribute('playsinline', 'true'); // wichtig für mobile Geräte
+            video.style.width = '100%';
+            video.style.maxWidth = '500px';
+
             const modal = document.createElement('div');
             modal.className = 'modal';
             modal.innerHTML = `<div class="modal-content"><h3>Zeige das Blatt mit Namen + Noten</h3></div>`;
@@ -572,24 +576,35 @@ const startCameraInput = () => {
             video.srcObject = stream;
             video.play();
 
-            const canvas = document.getElementById('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            video.onloadedmetadata = () => {
+                // Nach dem Start ein paar Sekunden warten für Scharfstellung
+                setTimeout(() => {
+                    const canvas = document.getElementById('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
 
-            setTimeout(() => {
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                stream.getTracks().forEach(track => track.stop());
-                modal.remove();
-                canvas.toBlob(blob => {
-                    Tesseract.recognize(blob, 'deu').then(result => {
-                        processNoteData(result.data.text, columnIndex);
-                    });
-                });
-            }, 4000);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    stream.getTracks().forEach(track => track.stop());
+                    modal.remove();
+
+                    canvas.toBlob(blob => {
+                        Tesseract.recognize(blob, 'deu').then(result => {
+                            console.log("Erkannter Text:", result.data.text);
+                            processNoteData(result.data.text, columnIndex);
+                        }).catch(err => {
+                            alert("Fehler beim Erkennen der Noten: " + err.message);
+                        });
+                    }, 'image/png');
+                }, 3000); // 3 Sekunden warten
+            };
+        }).catch(err => {
+            alert("Kamera konnte nicht gestartet werden: " + err.message);
         });
     });
 };
+
 
 const processNoteData = (text, columnIndex) => {
     const lines = text.split('\n');
