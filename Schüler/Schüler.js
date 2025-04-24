@@ -312,7 +312,7 @@ const updateAverages = () => {
                 }
             });
             
-            const avg = count > 0 ? (sum / count).toFixed(2) : "";
+            const avg = count > 0 ? (sum / count).toFixed(1) : "";
             rows[i].cells[schnittColIndex].textContent = avg;
         }
     }
