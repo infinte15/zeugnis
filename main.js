@@ -8,7 +8,7 @@ const createWindow = () => {
     height: 1000,
   })
   win.maximize();
-  win.loadFile('Klasse/klasse.html')
+  win.loadFile('index.html')
 }
 
 app.whenReady().then(() => {
