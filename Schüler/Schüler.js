@@ -573,6 +573,9 @@ const startCameraInput = () => {
             video.play();
 
             const canvas = document.getElementById('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
             setTimeout(() => {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
