@@ -540,7 +540,7 @@ document.getElementById('imageUpload').addEventListener('change', (e) => {
         if (['txt', 'csv'].includes(ext)) {
             const text = await file.text();
             processNoteData(text, columnIndex);
-        } else if (['xls', 'xlsx'].includes(ext)) {
+        } else if (['xls', 'xlsx','docx'].includes(ext)) {
             const reader = new FileReader();
             reader.onload = (ev) => {
                 const workbook = XLSX.read(ev.target.result, { type: 'binary' });
