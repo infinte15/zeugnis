@@ -1,7 +1,7 @@
 {
   "name": "zeugnisprogramm",
   "productName": "Zeugnisprogramm",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "zeugnisprogramm",
   "main": "main.js",
   "scripts": {
