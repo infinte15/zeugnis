@@ -419,33 +419,31 @@ const enableArrowNavigation = () => {
 
         const isSchnitt = (cell) =>
             cell.dataset.columnLetter && cell.dataset.columnLetter.includes('-schnitt');
-        const findNextEditableCell = (rowIdx, direction) => {
-            let targetIdx = cellIndex;
-            while (true) {
-                targetIdx += direction;
-                if (
-                    targetIdx < 2 || 
-                    targetIdx >= table.rows[rowIdx].cells.length
-                ) break;
-        
+
+        const findNextEditableCell = (rowIdx, startIdx, direction) => {
+            let targetIdx = startIdx + direction;
+            while (
+                targetIdx >= 0 &&
+                targetIdx < table.rows[rowIdx].cells.length
+            ) {
                 const cell = table.rows[rowIdx].cells[targetIdx];
                 if (cell && cell.isContentEditable) return cell;
+                targetIdx += direction;
             }
             return null;
         };
-        
 
-        const findVerticalEditableCell = (rowDirection) => {
-            let targetRowIdx = rowIndex + rowDirection;
+        const findVerticalEditableCell = (startRowIdx, direction) => {
+            let targetRowIdx = startRowIdx + direction;
             while (
-                targetRowIdx > 0 &&
+                targetRowIdx >= 0 &&
                 targetRowIdx < table.rows.length
             ) {
                 const targetCell = table.rows[targetRowIdx].cells[cellIndex];
                 if (targetCell && targetCell.isContentEditable && !isSchnitt(targetCell)) {
                     return targetCell;
                 }
-                targetRowIdx += rowDirection;
+                targetRowIdx += direction;
             }
             return null;
         };
@@ -454,16 +452,16 @@ const enableArrowNavigation = () => {
 
         switch (e.key) {
             case 'ArrowUp':
-                targetCell = findVerticalEditableCell(-1);
+                targetCell = findVerticalEditableCell(rowIndex, -1);
                 break;
             case 'ArrowDown':
-                targetCell = findVerticalEditableCell(1);
+                targetCell = findVerticalEditableCell(rowIndex, 1);
                 break;
             case 'ArrowLeft':
-                targetCell = findNextEditableCell(rowIndex, -1);
+                targetCell = findNextEditableCell(rowIndex, cellIndex, -1);
                 break;
             case 'ArrowRight':
-                targetCell = findNextEditableCell(rowIndex, 1);
+                targetCell = findNextEditableCell(rowIndex, cellIndex, 1);
                 break;
         }
 
