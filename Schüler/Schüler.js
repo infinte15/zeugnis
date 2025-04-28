@@ -407,70 +407,102 @@ function loadWeights() {
 
 
 const enableArrowNavigation = () => {
-    const table = document.getElementById('itemTable');
-
-    table.addEventListener('keydown', function (e) {
-        const currentCell = document.activeElement;
-        if (!currentCell || currentCell.tagName !== 'TD') return;
-
-        const row = currentCell.parentElement;
-        const rowIndex = row.rowIndex;
-        const cellIndex = currentCell.cellIndex;
-
-        const isSchnitt = (cell) =>
-            cell.dataset.columnLetter && cell.dataset.columnLetter.includes('-schnitt');
-
-        const findNextEditableCell = (rowIdx, startIdx, direction) => {
-            let targetIdx = startIdx + direction;
-            while (
-                targetIdx >= 0 &&
-                targetIdx < table.rows[rowIdx].cells.length
-            ) {
-                const cell = table.rows[rowIdx].cells[targetIdx];
-                if (cell && cell.isContentEditable) return cell;
-                targetIdx += direction;
-            }
-            return null;
-        };
-
-        const findVerticalEditableCell = (startRowIdx, direction) => {
-            let targetRowIdx = startRowIdx + direction;
-            while (
-                targetRowIdx >= 0 &&
-                targetRowIdx < table.rows.length
-            ) {
-                const targetCell = table.rows[targetRowIdx].cells[cellIndex];
-                if (targetCell && targetCell.isContentEditable && !isSchnitt(targetCell)) {
-                    return targetCell;
+        const table = document.getElementById('itemTable');
+        if (!table) return;
+    
+        table.addEventListener('keydown', function (e) {
+            const active = document.activeElement;
+            if (!active || active.tagName !== 'TD') return;
+    
+            const cell = active;
+            const row = cell.parentElement;
+            const rowIndex = row.rowIndex;
+            const cellIndex = cell.cellIndex;
+    
+            let nextRowIndex = rowIndex;
+            let nextCellIndex = cellIndex;
+    
+            if (e.key === 'ArrowRight') {
+                nextCellIndex++;
+                if (nextCellIndex >= row.cells.length) {
+                    nextCellIndex = 0;
+                    nextRowIndex++;
+                    if (nextRowIndex >= table.rows.length) nextRowIndex = 1;
                 }
-                targetRowIdx += direction;
+            } else if (e.key === 'ArrowLeft') {
+                nextCellIndex--;
+                if (nextCellIndex < 0) {
+                    nextRowIndex--;
+                    if (nextRowIndex < 1) nextRowIndex = table.rows.length - 1;
+                    nextCellIndex = table.rows[nextRowIndex].cells.length - 1;
+                }
+            } else if (e.key === 'ArrowDown') {
+                nextRowIndex++;
+                if (nextRowIndex >= table.rows.length) nextRowIndex = 1;
+            } else if (e.key === 'ArrowUp') {
+                nextRowIndex--;
+                if (nextRowIndex < 1) nextRowIndex = table.rows.length - 1;
+            } else {
+                return; // andere Taste → nichts tun
             }
-            return null;
-        };
-
-        let targetCell = null;
-
-        switch (e.key) {
-            case 'ArrowUp':
-                targetCell = findVerticalEditableCell(rowIndex, -1);
-                break;
-            case 'ArrowDown':
-                targetCell = findVerticalEditableCell(rowIndex, 1);
-                break;
-            case 'ArrowLeft':
-                targetCell = findNextEditableCell(rowIndex, cellIndex, -1);
-                break;
-            case 'ArrowRight':
-                targetCell = findNextEditableCell(rowIndex, cellIndex, 1);
-                break;
-        }
-
-        if (targetCell) {
+    
             e.preventDefault();
-            targetCell.focus();
+    
+            // Jetzt Schleife: solange ungültige Zelle → weiterspringen
+            while (skipCell(table, nextRowIndex, nextCellIndex)) {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    if (e.key === 'ArrowRight') {
+                        nextCellIndex++;
+                        if (nextCellIndex >= table.rows[nextRowIndex].cells.length) {
+                            nextCellIndex = 0;
+                            nextRowIndex++;
+                            if (nextRowIndex >= table.rows.length) nextRowIndex = 1;
+                        }
+                    } else {
+                        nextCellIndex--;
+                        if (nextCellIndex < 0) {
+                            nextRowIndex--;
+                            if (nextRowIndex < 1) nextRowIndex = table.rows.length - 1;
+                            nextCellIndex = table.rows[nextRowIndex].cells.length - 1;
+                        }
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    nextRowIndex++;
+                    if (nextRowIndex >= table.rows.length) nextRowIndex = 1;
+                } else if (e.key === 'ArrowUp') {
+                    nextRowIndex--;
+                    if (nextRowIndex < 1) nextRowIndex = table.rows.length - 1;
+                }
+            }
+    
+            const nextCell = table.rows[nextRowIndex].cells[nextCellIndex];
+            if (nextCell) {
+                nextCell.focus();
+            }
+        });
+    
+        // Alle editierbaren Zellen müssen tabindex haben
+        for (let i = 1; i < table.rows.length; i++) {
+            for (let j = 0; j < table.rows[i].cells.length; j++) {
+                const cell = table.rows[i].cells[j];
+                if (cell.contentEditable === "true") {
+                    cell.setAttribute('tabindex', '0');
+                }
+            }
         }
-    });
-};
+    };
+    
+    function skipCell(table, rowIndex, cellIndex) {
+        if (rowIndex < 1 || rowIndex >= table.rows.length) return true;
+        const row = table.rows[rowIndex];
+        if (!row || cellIndex < 0 || cellIndex >= row.cells.length) return true;
+        const cell = row.cells[cellIndex];
+        if (!cell) return true;
+        if (cell.dataset.columnLetter && cell.dataset.columnLetter.includes('schnitt')) return true;
+        if (cell.contentEditable !== "true") return true;
+        return false;
+    }
+    
 
 const convertNote = (noteStr) => {
     noteStr = noteStr.trim();
