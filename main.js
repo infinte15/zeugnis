@@ -17,7 +17,7 @@ const createWindow = () => {
   win.maximize(); 
   win.show();     
 
-  win.loadFile('index.html');
+  win.loadFile('blume.html');
 }
 
 app.whenReady().then(() => {
