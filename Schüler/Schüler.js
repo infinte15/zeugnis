@@ -561,88 +561,10 @@ const showColumnSelectModal = (callback) => {
 
 
 
-document.getElementById('imageUpload').addEventListener('change', (e) => {
-    showColumnSelectModal(async (columnIndex) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (['txt', 'csv'].includes(ext)) {
-            const text = await file.text();
-            processNoteData(text, columnIndex);
-        } else if (['xls', 'xlsx','docx'].includes(ext)) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const workbook = XLSX.read(ev.target.result, { type: 'binary' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                let text = data.map(row => row.join('\t')).join('\n');
-                processNoteData(text, columnIndex);
-            };
-            reader.readAsBinaryString(file);
-        } else if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
-            const image = URL.createObjectURL(file);
-            Tesseract.recognize(image, 'deu').then(result => {
-                processNoteData(result.data.text, columnIndex);
-            });
-        }
-    });
-});
-
-const startCameraInput = () => {
-    showColumnSelectModal((columnIndex) => {
-        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-            const video = document.createElement('video');
-            video.setAttribute('playsinline', 'true'); // wichtig für mobile Geräte
-            video.style.width = '100%';
-            video.style.maxWidth = '500px';
-
-            const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.innerHTML = `<div class="modal-content"><h3>Zeige das Blatt mit Namen + Noten</h3></div>`;
-            modal.querySelector('.modal-content').appendChild(video);
-            document.body.appendChild(modal);
-
-            video.srcObject = stream;
-            video.play();
-
-            video.onloadedmetadata = () => {
-                // Nach dem Start ein paar Sekunden warten für Scharfstellung
-                setTimeout(() => {
-                    const canvas = document.getElementById('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                    stream.getTracks().forEach(track => track.stop());
-                    modal.remove();
-
-                    canvas.toBlob(blob => {
-                        Tesseract.recognize(blob, 'deu').then(result => {
-                            console.log("Erkannter Text:", result.data.text);
-                            processNoteData(result.data.text, columnIndex);
-                        }).catch(err => {
-                            alert("Fehler beim Erkennen der Noten: " + err.message);
-                        });
-                    }, 'image/png');
-                }, 3000); // 3 Sekunden warten
-            };
-        }).catch(err => {
-            alert("Kamera konnte nicht gestartet werden: " + err.message);
-        });
-    });
-};
-
-
 const processNoteData = (text, columnIndex) => {
     const lines = text.split('\n');
     const data = dataManager.loadData();
     const cellData = dataManager.loadCellData();
-
-    let updatedData = [...data];
-    let updated = false;
 
     lines.forEach(line => {
         const parts = line.trim().split(/\s+/);
@@ -653,11 +575,10 @@ const processNoteData = (text, columnIndex) => {
         const note = convertNote(noteRaw);
         if (!name || note === "") return;
 
-        let rowIndex = updatedData.indexOf(name);
+        let rowIndex = data.indexOf(name);
         if (rowIndex === -1) {
-            updatedData.push(name);
-            rowIndex = updatedData.length - 1;
-            updated = true;
+            data.push(name);
+            rowIndex = data.length - 1;
         }
 
         const actualRowIndex = rowIndex + 1;
@@ -665,10 +586,11 @@ const processNoteData = (text, columnIndex) => {
         cellData[actualRowIndex][columnIndex] = String(note);
     });
 
-    if (updated) dataManager.saveData(updatedData);
+    dataManager.saveData(data);
     dataManager.saveCellData(cellData);
-    tableManager.renderTable(updatedData);
+    tableManager.renderTable(data);
 };
+
 
 document.getElementById('exportButton').addEventListener('click', () => {
     const modal = document.createElement('div');
@@ -784,6 +706,7 @@ window.addEventListener('pageshow', function () {
         darkModeToggle.checked = localStorage.getItem('darkMode') === 'enabled';
     }
 });
+
 
 document.addEventListener('DOMContentLoaded', () => {
     let pageTitle = document.getElementById('pageTitle');
