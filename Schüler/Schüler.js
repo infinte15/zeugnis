@@ -559,7 +559,41 @@ const showColumnSelectModal = (callback) => {
     modal.style.display = 'flex';
 };
 
+document.getElementById('imageUpload').addEventListener('change', (e) => {
+    showColumnSelectModal(async (columnIndex) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
+        const ext = file.name.split('.').pop().toLowerCase();
+
+        if (['txt', 'csv'].includes(ext)) {
+            const text = await file.text();
+            processNoteData(text, columnIndex);
+
+  } else if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+    const image = URL.createObjectURL(file);
+    Tesseract.recognize(image, 'deu')
+        .then(result => {
+            let rawText = result.data.text;
+            let cleanedText = rawText
+                .replace(/\r/g, '')
+                .replace(/[^\wäöüÄÖÜß\s+.,/-]/g, '') // Nur Buchstaben, Zahlen, Komma, Minus, etc.
+                .replace(/[ \t]{2,}/g, ' ')
+                .replace(/\n{2,}/g, '\n')
+                .trim();
+
+            console.log("OCR Output:\n", cleanedText); // Debug
+            processNoteData(cleanedText, columnIndex);
+        })
+        .catch(err => {
+            alert("Fehler beim Auslesen des Bildes.");
+            console.error(err);
+        });
+        } else {
+            alert("Dateiformat nicht unterstützt.");
+        }
+    });
+});
 
 const processNoteData = (text, columnIndex) => {
     const lines = text.split('\n');
@@ -567,11 +601,11 @@ const processNoteData = (text, columnIndex) => {
     const cellData = dataManager.loadCellData();
 
     lines.forEach(line => {
-        const parts = line.trim().split(/\s+/);
-        if (parts.length < 2) return;
+        const match = line.trim().match(/^([A-Za-zÄÖÜäöüß\s]+)\s+([\d.,+\-/]+)$/);
+        if (!match) return;
 
-        const name = parts.slice(0, -1).join(' ');
-        const noteRaw = parts[parts.length - 1];
+        const name = match[1].trim();
+        const noteRaw = match[2].trim();
         const note = convertNote(noteRaw);
         if (!name || note === "") return;
 

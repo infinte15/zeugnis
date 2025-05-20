@@ -17,7 +17,7 @@
         <button id="weightSettingsBtn" class="circle-btn">📊</button>
 
         <label for="imageUpload" class="circle-btn upload-icon">📂</label>
-        <input type="file" accept=".docx,.png,.jpg,.jpeg,.bmp,.gif,.txt,.csv,.xls,.xlsx,.webp,.pdf" id="imageUpload" style="display:none">
+        <input type="file" accept=".docx,.png,.jpg,.jpeg,.txt" id="imageUpload" style="display:none">
         <div id="columnSelectModal" class="modal" style="display: none;">
             <div class="modal-content">
                 <h3>Spalte für Daten auswählen</h3>
@@ -90,9 +90,9 @@
         <input type="text" id="detailField" placeholder="Neuen Schüler hinzufügen">
         <button   onclick="addDetail()" id="add-student-button">→</button>
     </div>
-    <script src="Schüler.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="Schüler.js"></script>
 
     <canvas id="canvas" style="display:none;"></canvas>
 </body>
